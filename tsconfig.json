@@ -1,0 +1,3 @@
+{
+  "extends": "@blak/typescript-config/base.json"
+}

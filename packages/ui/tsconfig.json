@@ -1,0 +1,10 @@
+{
+  "extends": "@blak/typescript-config/react-library.json",
+  "compilerOptions": {
+    "paths": {
+      "@blak/ui/*": ["./src/*"]
+    }
+  },
+  "include": ["."],
+  "exclude": ["node_modules", "dist"]
+}

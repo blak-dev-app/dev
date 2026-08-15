@@ -1,0 +1,13 @@
+{
+  "extends": "@blak/typescript-config/base.json",
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "types": ["node"],
+    "paths": {
+      "@blak/db/*": ["./src/*"]
+    }
+  },
+  "include": ["."],
+  "exclude": ["node_modules", "dist", "./src/migrations"]
+}

@@ -1,0 +1,99 @@
+{
+  "hero": {
+    "title": "El estándar operativo detrás de cada experiencia de primera clase",
+    "description": "BLAK está creando el estándar operativo de hospitalidad para el transporte terrestre premium, conectando operadores de confianza bajo una experiencia de huésped consistente.",
+    "partner": {
+      "label": "Asóciese con BLAK",
+      "description": "Hoteles, residencias y hospitalidad"
+    },
+    "operator": {
+      "label": "Únase como operador",
+      "description": "Conductores y empresas de transporte"
+    }
+  },
+  "travelExperience": {
+    "title": "Vivir Cada Viaje",
+    "subtitle": "Una Mejor Forma de",
+    "items": {
+      "hotelsResorts": {
+        "title": "HOTELES Y RESORTS",
+        "subtitle": "Transporte de lujo para huéspedes"
+      },
+      "airlinesAirports": {
+        "title": "AEROLÍNEAS Y AEROPUERTOS",
+        "subtitle": "Traslados al aeropuerto sin complicaciones"
+      },
+      "mobilityFleet": {
+        "title": "MOVILIDAD Y FLOTA",
+        "subtitle": "Soluciones de flota flexibles"
+      },
+      "corporateTravel": {
+        "title": "VIAJES CORPORATIVOS",
+        "subtitle": "Viajes ejecutivos de negocios"
+      },
+      "eventsLifestyle": {
+        "title": "EVENTOS Y ESTILO DE VIDA",
+        "subtitle": "Transporte para cada ocasión"
+      },
+      "strategicInvestors": {
+        "title": "INVERSORES ESTRATÉGICOS",
+        "subtitle": "Alianzas que impulsan el crecimiento"
+      }
+    }
+  },
+  "experienceJourney": {
+    "title": "Experiencia de Viaje Completa",
+    "subtitle": "Conectando la",
+    "items": {
+      "consistentGuestExperience": {
+        "title": "Experiencia Consistente para el Huésped",
+        "description": "Cada viaje cumple con los mismos altos estándares de profesionalismo, seguridad, hospitalidad y discreción."
+      },
+      "operationalAccountability": {
+        "title": "Responsabilidad Operativa",
+        "description": "Una red de transporte gestionada con proveedores cualificados, comunicación clara y un servicio confiable."
+      },
+      "flexiblePilotPrograms": {
+        "title": "Programas Piloto Flexibles",
+        "description": "Comience con una sola propiedad, cuenta, evento o mercado y amplíe con confianza según los resultados."
+      },
+      "longTermCommercialValue": {
+        "title": "Valor Comercial a Largo Plazo",
+        "description": "Modelos de colaboración personalizados diseñados para generar valor sostenible para su empresa a medida que crece."
+      }
+    }
+  },
+  "managedExperience": {
+    "title": "Una Experiencia Gestionada",
+    "subtitle": "MÁS QUE UN VIAJE",
+    "description": "BLAK está creando la infraestructura de transporte terrestre premium que conecta la hospitalidad, la aviación, los viajes corporativos, los socios de movilidad y los proveedores profesionales de transporte. Nuestro modelo combina sedanes y SUV premium aprobados, conductores cuidadosamente seleccionados, estándares de servicio detallados y tecnología diseñada para mejorar la experiencia desde la reserva hasta el destino final.",
+    "overview": "Descripción de la Alianza"
+  },
+  "focusedPilot": {
+    "subtitle": "Comience con",
+    "title": "Un Programa Piloto Enfocado",
+    "items": {
+      "oneMarketOrProperty": {
+        "title": "Un Mercado o Propiedad",
+        "subtitle": "Comience dentro de un área de servicio claramente definida para validar las operaciones de manera efectiva."
+      },
+      "approvedDriverNetwork": {
+        "title": "Red de Conductores Aprobados",
+        "subtitle": "Seleccione profesionales cualificados y vehículos BLAK aprobados para el programa piloto."
+      },
+      "premiumServiceCategories": {
+        "title": "Categorías de Servicio Premium",
+        "subtitle": "Traslados al aeropuerto, servicio por horas, transporte ejecutivo, restaurantes, eventos y traslados VIP."
+      },
+      "performanceReview": {
+        "title": "Evaluación del Rendimiento",
+        "subtitle": "Mida la satisfacción de los huéspedes, los tiempos de respuesta, la consistencia del servicio y la preparación para la expansión."
+      }
+    }
+  },
+  "cta": {
+    "subtitle": "Construyamos",
+    "title": "Una Experiencia de Primera Clase",
+    "description": "BLAK está construyendo su red inicial de socios de hospitalidad y operadores de transporte premium en mercados seleccionados."
+  }
+}

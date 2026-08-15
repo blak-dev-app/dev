@@ -1,0 +1,99 @@
+{
+  "hero": {
+    "title": "The Operating Standard Behind Every First-Class Experience",
+    "description": "BLAK is building the hospitality operating standard for premium ground transportation, connecting trusted operators under one consistent guest experience.",
+    "partner": {
+      "label": "Partner with BLAK",
+      "description": "Hotels, residences & hospitality"
+    },
+    "operator": {
+      "label": "Join as an Operator",
+      "description": "Drivers & transportation companies"
+    }
+  },
+  "travelExperience": {
+    "title": "Complete Travel Experience",
+    "subtitle": "Connecting the",
+    "items": {
+      "hotelsResorts": {
+        "title": "HOTELS & RESORTS",
+        "subtitle": "Luxury guest transportation"
+      },
+      "airlinesAirports": {
+        "title": "AIRLINES & AIRPORTS",
+        "subtitle": "Seamless airport transfers"
+      },
+      "mobilityFleet": {
+        "title": "MOBILITY & FLEET",
+        "subtitle": "Flexible fleet solutions"
+      },
+      "corporateTravel": {
+        "title": "CORPORATE TRAVEL",
+        "subtitle": "Executive business travel"
+      },
+      "eventsLifestyle": {
+        "title": "EVENTS & LIFESTYLE",
+        "subtitle": "Transportation for every occasion"
+      },
+      "strategicInvestors": {
+        "title": "STRATEGIC INVESTORS",
+        "subtitle": "Partnerships driving growth"
+      }
+    }
+  },
+  "experienceJourney": {
+    "title": "Experience Every Journey",
+    "subtitle": "A Better Way to ",
+    "items": {
+      "consistentGuestExperience": {
+        "title": "Consistent Guest Experience",
+        "description": "Every ride meets the same high standards for professionalism, safety, hospitality, and discretion."
+      },
+      "operationalAccountability": {
+        "title": "Operational Accountability",
+        "description": "A managed transportation network with qualified providers, clear communication, and dependable service."
+      },
+      "flexiblePilotPrograms": {
+        "title": "Flexible Pilot Programs",
+        "description": "Launch with a single property, account, event, or market, then scale confidently based on performance."
+      },
+      "longTermCommercialValue": {
+        "title": "Long-term Commercial Value",
+        "description": "Custom partnership models designed to create sustainable value for your business as it grows."
+      }
+    }
+  },
+  "managedExperience": {
+    "title": "A Managed Experience",
+    "subtitle": "MORE THAN A RIDE",
+    "description": "BLAK is creating the premium ground transportation layer connecting hospitality, aviation, corporate travel, mobility partners, and professional transportation providers. Our model combines approved black sedans and SUVs, carefully selected drivers, detailed service standards, and technology designed to improve the experience from booking through final drop-off.",
+    "overview": "Partnership Overview"
+  },
+  "focusedPilot": {
+    "subtitle": "Start With",
+    "title": "A Focused Pilot",
+    "items": {
+      "oneMarketOrProperty": {
+        "title": "One Market or Property",
+        "subtitle": "Launch within a clearly defined service area to validate operations effectively."
+      },
+      "approvedDriverNetwork": {
+        "title": "Approved Driver Network",
+        "subtitle": "Select qualified professionals and approved BLAK vehicles for the pilot."
+      },
+      "premiumServiceCategories": {
+        "title": "Premium Service Categories",
+        "subtitle": "Airport transfers, hourly service, executive transportation, dining, events, and VIP movements."
+      },
+      "performanceReview": {
+        "title": "Performance Review",
+        "subtitle": "Measure guest satisfaction, response times, service consistency, and readiness for expansion."
+      }
+    }
+  },
+  "cta": {
+    "subtitle": "LET’S BUILD",
+    "title": "A First Class Experience",
+    "description": "BLAK is building its initial network of hospitality partners and premium transportation operators across select markets."
+  }
+}

@@ -1,0 +1,215 @@
+{
+  "hero": {
+    "title": "Partner With BLAK",
+    "description": "BLAK helps hotels, resorts, property managers, concierge companies, private aviation and other hospitality partners offer premium ground transportation under one consistent standard."
+  },
+
+  "form": {
+    "title": "Join the BLAK Partner Network",
+    "description": "Give your guests access to a consistent, first-class ground transportation experience through the BLAK network.",
+    "note": "There is no cost to apply or join the initial BLAK Partner Network. Applications are subject to verification and approval.",
+    "business": {
+      "title": "Business Information",
+      "description": "Tell us about your business"
+    },
+    "contact": {
+      "title": "Primary Contact",
+      "description": "Who should we contact?"
+    },
+    "operations": {
+      "title": "Your Guest Operations",
+      "description": "Help us understand your guest needs."
+    },
+    "partnership": {
+      "title": "BLAK Partnership",
+      "description": "Tell us how you would like to work with BLAK."
+    },
+
+    "businessName": {
+      "label": "Business / Property Name",
+      "placeholder": "Legal or operating name of your business",
+      "errors": {
+        "required": "Business or property name is required"
+      }
+    },
+
+    "businessType": {
+      "label": "Business Type",
+      "placeholder": "Select business type",
+      "description": "Select the option that best describes your business.",
+      "errors": {
+        "required": "Please select a business type"
+      }
+    },
+
+    "website": {
+      "label": "Website",
+      "placeholder": "https://yourwebsite.com",
+      "description": "Business website or booking page.",
+      "errors": {
+        "invalid": "Please enter a valid website URL"
+      }
+    },
+
+    "socialMedia": {
+      "label": "Instagram / Social Media",
+      "placeholder": "@yourbusiness",
+      "description": "Optional — helps us verify your business."
+    },
+
+    "city": {
+      "label": "City",
+      "placeholder": "Primary market",
+      "errors": {
+        "required": "City is required"
+      }
+    },
+
+    "country": {
+      "label": "Country",
+      "placeholder": "Select country",
+      "errors": {
+        "required": "Country is required"
+      }
+    },
+    "fullName": {
+      "label": "Full Name",
+      "placeholder": "Primary contact",
+      "errors": {
+        "required": "Full name is required"
+      }
+    },
+
+    "position": {
+      "label": "Title / Position",
+      "placeholder": "Your role within the business",
+      "errors": {
+        "required": "Title or position is required"
+      }
+    },
+
+    "businessEmail": {
+      "label": "Business Email",
+      "placeholder": "you@company.com",
+      "description": "We'll use this for partner communications.",
+      "errors": {
+        "invalid": "Please enter a valid business email"
+      }
+    },
+
+    "countryCode": {
+      "label": "Country Code",
+      "placeholder": "Select country code"
+    },
+
+    "phoneNumber": {
+      "label": "WhatsApp / Phone",
+      "placeholder": "123 456 7890",
+      "description": "Include country code. Make sure this number can receive WhatsApp messages if applicable.",
+      "errors": {
+        "required": "Please enter a valid phone number"
+      }
+    },
+    "propertiesRooms": {
+      "label": "How many properties or rooms do you represent/manage?",
+      "placeholder": "e.g. 25 properties or 150 rooms",
+      "description": "An estimate is fine.",
+      "errors": {
+        "required": "Please provide an estimate"
+      }
+    },
+
+    "monthlyBookings": {
+      "label": "Approximately how many guests/bookings do you serve per month?",
+      "placeholder": "e.g. 200",
+      "description": "An estimate is fine."
+    },
+
+    "currentTransportation": {
+      "label": "Do you currently arrange ground transportation for guests?",
+      "errors": {
+        "required": "Please select an option"
+      }
+    },
+
+    "transportationDetails": {
+      "label": "How do you currently arrange transportation?",
+      "placeholder": "For example: internal drivers, local operators, concierge contacts or transportation companies"
+    },
+
+    "transportationServices": {
+      "label": "Which transportation services would be most useful to your guests?",
+      "description": "Select all that apply.",
+      "errors": {
+        "required": "Please select at least one service"
+      }
+    },
+
+    "partnershipUses": {
+      "label": "How would you like to use BLAK?",
+      "errors": {
+        "required": "Please select at least one option"
+      }
+    },
+
+    "additionalInformation": {
+      "label": "Anything else we should know?",
+      "optional": "Optional",
+      "placeholder": "Tell us anything else that may be helpful..."
+    },
+
+    "acknowledgment": {
+      "label": "Authorization",
+      "title": "I am authorized to submit this application on behalf of the business listed above and would like to be considered for the BLAK Partner Network.",
+      "description": "Submitting this application does not guarantee acceptance. BLAK reviews and verifies prospective partners to maintain the quality and integrity of the network.",
+      "errors": {
+        "required": "You must confirm that you are authorized to submit this application"
+      }
+    }
+  },
+
+  "partnerBenefits": {
+    "subtitle": "Partner Benefits",
+    "title": "More Value For Your Guest",
+    "items": {
+      "elevateGuestExperience": {
+        "title": "Elevate the Guest Experience",
+        "description": "Extend your hospitality beyond the property with professional, consistent ground transportation."
+      },
+      "trustedNetwork": {
+        "title": "One Trusted Network",
+        "description": "Access a growing network of experienced transportation operators through one BLAK partnership."
+      },
+      "consistentStandards": {
+        "title": "Consistent Service Standards",
+        "description": "Give your guests a dependable experience built around service, professionalism, and presentation."
+      },
+      "simplifyTransportation": {
+        "title": "Simplify Transportation",
+        "description": "Reduce the complexity of coordinating ground transportation across operators, destinations, and guest requests."
+      },
+      "expandYourOffering": {
+        "title": "Expand Your Offering",
+        "description": "Offer airport transfers, hourly service, and executive transportation without building your own fleet."
+      },
+      "growWithBlak": {
+        "title": "Grow With BLAK",
+        "description": "Join early and grow alongside a network connecting premium hospitality and travel partners with quality transportation providers."
+      }
+    }
+  },
+  "earlyPartnerProgram": {
+    "title": "The Early Partner Program",
+    "subtitle": "Get in early.",
+    "description": "BLAK is building its initial partner network with a select group of hospitality, travel, and property partners.",
+    "note": "There is no cost to apply or join the initial BLAK Partner Network."
+  },
+  "services": {
+    "seamlessGuestTransportation": "SEAMLESS GUEST TRANSPORTATION",
+    "airportArrivalDeparture": "AIRPORT ARRIVAL & DEPARTURE",
+    "hourlyExecutiveService": "HOURLY & EXECUTIVE SERVICE",
+    "approvedOperators": "APPROVED OPERATORS",
+    "consistentServiceStandards": "CONSISTENT SERVICE STANDARDS",
+    "oneNetwork": "ONE NETWORK"
+  }
+}

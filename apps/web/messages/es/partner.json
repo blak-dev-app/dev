@@ -1,0 +1,216 @@
+{
+  "hero": {
+    "title": "Asóciese con BLAK",
+    "description": "BLAK ayuda a hoteles, resorts, administradores de propiedades, empresas de concierge, aviación privada y otros socios de hospitalidad a ofrecer transporte terrestre premium bajo un estándar de servicio consistente."
+  },
+  "form": {
+    "title": "Únase a la Red de Socios de BLAK",
+    "description": "Brinde a sus huéspedes acceso a una experiencia de transporte terrestre consistente y de primera clase a través de la red BLAK.",
+    "note": "No hay ningún costo para solicitar su incorporación o unirse a la Red Inicial de Socios de BLAK. Todas las solicitudes están sujetas a verificación y aprobación.",
+    "business": {
+      "title": "Información de la empresa",
+      "description": "Cuéntenos sobre su empresa"
+    },
+    "partnership": {
+      "title": "Alianza con BLAK",
+      "description": "Cuéntenos cómo le gustaría trabajar con BLAK."
+    },
+    "contact": {
+      "title": "Contacto principal",
+      "description": "¿Con quién debemos comunicarnos?"
+    },
+    "operations": {
+      "title": "Operaciones con sus huéspedes",
+      "description": "Ayúdenos a comprender las necesidades de sus huéspedes."
+    },
+
+    "businessName": {
+      "label": "Nombre de la empresa / propiedad",
+      "placeholder": "Nombre legal o comercial de su empresa",
+      "errors": {
+        "required": "El nombre de la empresa o propiedad es obligatorio"
+      }
+    },
+
+    "businessType": {
+      "label": "Tipo de empresa",
+      "placeholder": "Seleccione el tipo de empresa",
+      "description": "Seleccione la opción que mejor describa su empresa.",
+      "errors": {
+        "required": "Seleccione un tipo de empresa"
+      }
+    },
+
+    "website": {
+      "label": "Sitio web",
+      "placeholder": "https://suempresa.com",
+      "description": "Sitio web de la empresa o página de reservas.",
+      "errors": {
+        "invalid": "Ingrese una URL válida"
+      }
+    },
+
+    "socialMedia": {
+      "label": "Instagram / Redes sociales",
+      "placeholder": "@suempresa",
+      "description": "Opcional — nos ayuda a verificar su empresa."
+    },
+
+    "city": {
+      "label": "Ciudad",
+      "placeholder": "Mercado principal",
+      "errors": {
+        "required": "La ciudad es obligatoria"
+      }
+    },
+
+    "country": {
+      "label": "País",
+      "placeholder": "Seleccione el país",
+      "errors": {
+        "required": "El país es obligatorio"
+      }
+    },
+
+    "fullName": {
+      "label": "Nombre completo",
+      "placeholder": "Contacto principal",
+      "errors": {
+        "required": "El nombre completo es obligatorio"
+      }
+    },
+
+    "position": {
+      "label": "Cargo / Puesto",
+      "placeholder": "Su función dentro de la empresa",
+      "errors": {
+        "required": "El cargo o puesto es obligatorio"
+      }
+    },
+
+    "businessEmail": {
+      "label": "Correo electrónico empresarial",
+      "placeholder": "usted@empresa.com",
+      "description": "Utilizaremos este correo para las comunicaciones con socios.",
+      "errors": {
+        "invalid": "Ingrese un correo electrónico empresarial válido"
+      }
+    },
+
+    "countryCode": {
+      "label": "Código de país",
+      "placeholder": "Seleccione el código de país"
+    },
+
+    "phoneNumber": {
+      "label": "WhatsApp / Teléfono",
+      "placeholder": "123 456 7890",
+      "description": "Incluya el código de país. Asegúrese de que este número pueda recibir mensajes de WhatsApp, si corresponde.",
+      "errors": {
+        "required": "Ingrese un número de teléfono válido"
+      }
+    },
+
+    "propertiesRooms": {
+      "label": "¿Cuántas propiedades o habitaciones representa/administra?",
+      "placeholder": "p. ej., 25 propiedades o 150 habitaciones",
+      "description": "Una estimación es suficiente.",
+      "errors": {
+        "required": "Proporcione una estimación"
+      }
+    },
+
+    "monthlyBookings": {
+      "label": "¿Aproximadamente cuántos huéspedes/reservas atiende al mes?",
+      "placeholder": "p. ej., 200",
+      "description": "Una estimación es suficiente."
+    },
+
+    "currentTransportation": {
+      "label": "¿Actualmente organiza transporte terrestre para sus huéspedes?",
+      "errors": {
+        "required": "Seleccione una opción"
+      }
+    },
+
+    "transportationDetails": {
+      "label": "¿Cómo organiza actualmente el transporte?",
+      "placeholder": "Por ejemplo: conductores internos, operadores locales, contactos de conserjería o empresas de transporte"
+    },
+
+    "transportationServices": {
+      "label": "¿Qué servicios de transporte serían más útiles para sus huéspedes?",
+      "description": "Seleccione todas las opciones que correspondan.",
+      "errors": {
+        "required": "Seleccione al menos un servicio"
+      }
+    },
+
+    "partnershipUses": {
+      "label": "¿Cómo le gustaría utilizar BLAK?",
+      "errors": {
+        "required": "Seleccione al menos una opción"
+      }
+    },
+
+    "additionalInformation": {
+      "label": "¿Hay algo más que debamos saber?",
+      "optional": "Opcional",
+      "placeholder": "Cuéntenos cualquier otra información que pueda ser útil..."
+    },
+
+    "acknowledgment": {
+      "label": "Autorización",
+      "title": "Estoy autorizado para enviar esta solicitud en nombre de la empresa indicada anteriormente y deseo ser considerado para la Red de Socios de BLAK.",
+      "description": "Enviar esta solicitud no garantiza la aceptación. BLAK revisa y verifica a los posibles socios para mantener la calidad e integridad de la red.",
+      "errors": {
+        "required": "Debe confirmar que está autorizado para enviar esta solicitud"
+      }
+    }
+  },
+  "partnerBenefits": {
+    "subtitle": "Beneficios para Socios",
+    "title": "Más valor para sus huéspedes",
+    "description": "Ofrezca a sus huéspedes una experiencia de transporte que refleje la calidad de su marca, respaldada por una red de confianza.",
+    "items": {
+      "elevateGuestExperience": {
+        "title": "Eleve la Experiencia del Huésped",
+        "description": "Extienda su hospitalidad más allá de la propiedad con un servicio de transporte profesional y consistente."
+      },
+      "trustedNetwork": {
+        "title": "Una Red de Confianza",
+        "description": "Acceda a una red creciente de operadores de transporte con experiencia a través de una sola alianza con BLAK."
+      },
+      "consistentStandards": {
+        "title": "Estándares de Servicio Consistentes",
+        "description": "Ofrezca a sus huéspedes una experiencia confiable basada en servicio, profesionalismo y presentación."
+      },
+      "simplifyTransportation": {
+        "title": "Simplifique el Transporte",
+        "description": "Reduzca la complejidad de coordinar el transporte terrestre entre operadores, destinos y solicitudes de huéspedes."
+      },
+      "expandYourOffering": {
+        "title": "Amplíe su Oferta",
+        "description": "Ofrezca traslados al aeropuerto, servicio por horas y transporte ejecutivo sin necesidad de crear su propia flota."
+      },
+      "growWithBlak": {
+        "title": "Crezca con BLAK",
+        "description": "Únase desde el inicio y crezca junto a una red que conecta a socios premium de hospitalidad y viajes con operadores de transporte de calidad."
+      }
+    }
+  },
+  "earlyPartnerProgram": {
+    "title": "Programa de Socios Iniciales",
+    "subtitle": "Sea parte desde el inicio.",
+    "description": "BLAK está formando su red inicial de socios con un grupo selecto de empresas de hospitalidad, viajes y administración de propiedades.",
+    "note": "No hay ningún costo para solicitar o unirse a la Red Inicial de Socios de BLAK."
+  },
+  "services": {
+    "seamlessGuestTransportation": "TRANSPORTE SIN INTERRUPCIONES PARA HUÉSPEDES",
+    "airportArrivalDeparture": "LLEGADAS Y SALIDAS DEL AEROPUERTO",
+    "hourlyExecutiveService": "SERVICIO POR HORAS Y EJECUTIVO",
+    "approvedOperators": "OPERADORES APROBADOS",
+    "consistentServiceStandards": "ESTÁNDARES DE SERVICIO CONSISTENTES",
+    "oneNetwork": "UNA SOLA RED"
+  }
+}

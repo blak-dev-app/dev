@@ -1,0 +1,175 @@
+{
+  "hero": {
+    "title": "What is a BLAK Operator?",
+    "description": "Independent professional chauffeurs/transportation companies who provide service through the BLAK network under one consistent service standard."
+  },
+  "form": {
+    "title": "Join the BLAK Operator Network",
+    "description": "Bring your transportation services to the BLAK network and connect with premium travel, hospitality, and mobility opportunities.",
+    "note": "There is no cost to apply or join the initial BLAK Operator Network. Applications are subject to verification and approval.",
+    "steps": {
+      "business": {
+        "title": "Company Information",
+        "description": "Tell us about your company."
+      },
+      "address": {
+        "title": "Company Location",
+        "description": "Tell us where your company is located."
+      },
+      "contact": {
+        "title": "Primary Contact",
+        "description": "Who should we contact?"
+      },
+      "operation": {
+        "title": "Operations & Coverage",
+        "description": "Tell us about your operating coverage and qualifications."
+      },
+      "service": {
+        "title": "Fleet & Services",
+        "description": "Tell us about your fleet and the services you provide."
+      }
+    },
+    "name": {
+      "label": "Company Name",
+      "placeholder": "Enter your company name"
+    },
+    "operatingName": {
+      "label": "Operating Name",
+      "placeholder": "Enter your operating name"
+    },
+    "type": {
+      "label": "Business Type",
+      "placeholder": "Select your business type"
+    },
+    "website": {
+      "label": "Website",
+      "placeholder": "https://example.com"
+    },
+    "email": {
+      "label": "Business Email",
+      "placeholder": "name@company.com"
+    },
+    "phone": {
+      "label": "Business Phone",
+      "placeholder": "+1 1234 456 789"
+    },
+    "address": {
+      "label": "Company Address",
+      "placeholder": "Enter your company address"
+    },
+    "city": {
+      "label": "City",
+      "placeholder": "Enter your city"
+    },
+    "state": {
+      "label": "State / Province",
+      "placeholder": "Enter your state or province"
+    },
+    "pincode": {
+      "label": "Postal Code",
+      "placeholder": "Enter your postal code"
+    },
+    "country": {
+      "label": "Country",
+      "placeholder": "Select your country"
+    },
+    "contactName": {
+      "label": "Contact Name",
+      "placeholder": "Enter the primary contact's name"
+    },
+    "contactTitle": {
+      "label": "Contact Title",
+      "placeholder": "Enter the contact's title"
+    },
+    "contactEmail": {
+      "label": "Contact Email",
+      "placeholder": "name@company.com"
+    },
+    "contactPhone": {
+      "label": "Contact Phone",
+      "placeholder": "+1 1234 456 789"
+    },
+    "commerciallyLicensedInsured": {
+      "label": "Are you currently commercially licensed and insured to provide passenger transportation?"
+    },
+    "operatesLuxurySedansSuvs": {
+      "label": "Are you currently commercially licensed and insured to provide passenger transportation?"
+    },
+    "operatingMarkets": {
+      "label": "Operating Markets",
+      "placeholder": "Select your operating markets"
+    },
+    "yearsInOperation": {
+      "label": "Years in Operation",
+      "placeholder": "Enter years in operation"
+    },
+    "vehicleCount": {
+      "label": "Vehicle Count",
+      "placeholder": "Enter number of vehicles"
+    },
+    "chauffeurCount": {
+      "label": "Chauffeur Count",
+      "placeholder": "Enter number of chauffeurs"
+    },
+    "serviceTypes": {
+      "label": "Service Types",
+      "placeholder": "Select your service types"
+    }
+  },
+  "marquee": {
+    "oneNetwork": "ONE NETWORK",
+    "oneStandard": "ONE STANDARD",
+    "exceptionalService": "EXCEPTIONAL SERVICE",
+    "globalReach": "GLOBAL REACH"
+  },
+  "whoCanApply": {
+    "subtitle": "Who Can Apply?",
+    "title": "Built for Professionals",
+    "items": {
+      "professionalDrivers": {
+        "title": "Professional Drivers",
+        "description": "Experienced professional drivers looking to join a premium ground transportation network."
+      },
+      "transportationOperators": {
+        "title": "Transportation Operators",
+        "description": "Established operators with qualified black vehicles and a commitment to exceptional service."
+      },
+      "operatorsWithoutVehicle": {
+        "title": "Operators Without a Vehicle",
+        "description": "Drivers and operators who meet BLAK standards can still apply. Vehicle partnership opportunities may be available to approved operators."
+      }
+    }
+  },
+
+  "process": {
+    "subtitle": "The BLAK Process",
+    "title": "From Interest to Approval",
+    "items": {
+      "submitInterest": {
+        "title": "Submit Your Interest",
+        "description": "Tell us about your operation and submit your information to be considered for BLAK’s initial Operator Network."
+      },
+      "blakReviewsInformation": {
+        "title": "BLAK Reviews Your Information",
+        "description": "Our team reviews your submission to determine whether your operation meets BLAK’s initial operator requirements."
+      },
+      "invitationToOnboarding": {
+        "title": "Invitation to Full Onboarding",
+        "description": "Qualified operators will be invited to complete full onboarding when BLAK opens in their market."
+      },
+      "completeOnboarding": {
+        "title": "Complete Operator Onboarding",
+        "description": "Provide the required documents, insurance details, vehicle and chauffeur information, and complete the BLAK Operator Agreement."
+      },
+      "operatorApproval": {
+        "title": "Operator Approval",
+        "description": "Once all required information and documentation have been reviewed and approved, your operation can join the BLAK Operator Network."
+      }
+    }
+  },
+  "networkGrowing": {
+    "subtitle": "The Network Is Growing",
+    "title": "Be Part of What Comes Next.",
+    "description": "BLAK is building relationships with hotels, airports, and other travel partners while developing a network of qualified operators across U.S. and international markets."
+  }
+}

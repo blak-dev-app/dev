@@ -1,0 +1,174 @@
+{
+  "hero": {
+    "title": "¿Qué es un Operador BLAK?",
+    "description": "Chóferes profesionales independientes y empresas de transporte que prestan servicio a través de la red BLAK bajo un estándar de servicio consistente."
+  },
+  "form": {
+    "title": "Únete a la Red de Operadores de BLAK",
+    "description": "Incorpora tus servicios de transporte a la red BLAK y conecta con oportunidades premium en viajes, hospitalidad y movilidad.",
+    "note": "No hay ningún costo para solicitar el ingreso o unirse a la Red Inicial de Operadores de BLAK. Las solicitudes están sujetas a verificación y aprobación.",
+    "steps": {
+      "business": {
+        "title": "Información de la Empresa",
+        "description": "Cuéntanos sobre tu empresa."
+      },
+      "address": {
+        "title": "Ubicación de la Empresa",
+        "description": "Indícanos dónde está ubicada tu empresa."
+      },
+      "contact": {
+        "title": "Contacto Principal",
+        "description": "¿Con quién debemos comunicarnos?"
+      },
+      "operation": {
+        "title": "Operaciones",
+        "description": "Cuéntenos sobre su cobertura operativa y sus credenciales."
+      },
+      "service": {
+        "title": "Flota y Servicios",
+        "description": "Cuéntenos sobre su flota y los servicios que ofrece."
+      }
+    },
+    "name": {
+      "label": "Nombre de la Empresa",
+      "placeholder": "Ingresa el nombre de tu empresa"
+    },
+    "operatingName": {
+      "label": "Nombre Comercial",
+      "placeholder": "Ingresa el nombre comercial"
+    },
+    "type": {
+      "label": "Tipo de Empresa",
+      "placeholder": "Selecciona el tipo de empresa"
+    },
+    "website": {
+      "label": "Sitio Web",
+      "placeholder": "https://ejemplo.com"
+    },
+    "email": {
+      "label": "Correo Electrónico Comercial",
+      "placeholder": "name@company.com"
+    },
+    "phone": {
+      "label": "Teléfono Comercial",
+      "placeholder": "+1 1234 456 789"
+    },
+    "address": {
+      "label": "Dirección de la Empresa",
+      "placeholder": "Ingresa la dirección de tu empresa"
+    },
+    "city": {
+      "label": "Ciudad",
+      "placeholder": "Ingresa tu ciudad"
+    },
+    "state": {
+      "label": "Estado / Provincia",
+      "placeholder": "Ingresa tu estado o provincia"
+    },
+    "pincode": {
+      "label": "Código Postal",
+      "placeholder": "Ingresa tu código postal"
+    },
+    "country": {
+      "label": "País",
+      "placeholder": "Selecciona tu país"
+    },
+    "contactName": {
+      "label": "Nombre del Contacto",
+      "placeholder": "Ingresa el nombre del contacto principal"
+    },
+    "contactTitle": {
+      "label": "Cargo del Contacto",
+      "placeholder": "Ingresa el cargo del contacto"
+    },
+    "contactEmail": {
+      "label": "Correo del Contacto",
+      "placeholder": "name@company.com"
+    },
+    "contactPhone": {
+      "label": "Teléfono del Contacto",
+      "placeholder": "+1 1234 456 789"
+    },
+    "commerciallyLicensedInsured": {
+      "label": "¿Actualmente cuenta con licencia comercial y seguro para proporcionar servicios de transporte de pasajeros?"
+    },
+    "operatesLuxurySedansSuvs": {
+      "label": "¿Actualmente opera sedanes y/o SUV de lujo de color negro?"
+    },
+    "operatingMarkets": {
+      "label": "Mercados de Operación",
+      "placeholder": "Selecciona tus mercados de operación"
+    },
+    "yearsInOperation": {
+      "label": "Años de Operación",
+      "placeholder": "Ingresa los años de operación"
+    },
+    "vehicleCount": {
+      "label": "Número de Vehículos",
+      "placeholder": "Ingresa el número de vehículos"
+    },
+    "chauffeurCount": {
+      "label": "Número de Conductores",
+      "placeholder": "Ingresa el número de conductores"
+    },
+    "serviceTypes": {
+      "label": "Tipos de Servicio",
+      "placeholder": "Selecciona tus tipos de servicio"
+    }
+  },
+  "marquee": {
+    "oneNetwork": "UNA SOLA RED",
+    "oneStandard": "UN SOLO ESTÁNDAR",
+    "exceptionalService": "SERVICIO EXCEPCIONAL",
+    "globalReach": "ALCANCE GLOBAL"
+  },
+  "whoCanApply": {
+    "subtitle": "¿Quién Puede Solicitar?",
+    "title": "Diseñado para profesionales",
+    "items": {
+      "professionalDrivers": {
+        "title": "Conductores Profesionales",
+        "description": "Conductores profesionales con experiencia que buscan formar parte de una red premium de transporte terrestre."
+      },
+      "transportationOperators": {
+        "title": "Operadores de Transporte",
+        "description": "Operadores establecidos con vehículos negros que cumplen los requisitos y un firme compromiso con un servicio excepcional."
+      },
+      "operatorsWithoutVehicle": {
+        "title": "Operadores Sin Vehículo",
+        "description": "Los conductores y operadores que cumplen con los estándares de BLAK también pueden solicitarlo. Puede haber oportunidades de asociación de vehículos para operadores aprobados."
+      }
+    }
+  },
+  "process": {
+    "subtitle": "El Proceso BLAK",
+    "title": "De la Solicitud a la Aprobación",
+    "items": {
+      "submitInterest": {
+        "title": "Envíe su Solicitud",
+        "description": "Cuéntenos sobre su operación y envíe su información para ser considerado para la Red Inicial de Operadores de BLAK."
+      },
+      "blakReviewsInformation": {
+        "title": "BLAK Revisa su Información",
+        "description": "Nuestro equipo revisará su solicitud para determinar si su operación cumple con los requisitos iniciales de BLAK."
+      },
+      "invitationToOnboarding": {
+        "title": "Invitación al Registro Completo",
+        "description": "Los operadores que cumplan con los requisitos serán invitados a completar el proceso de registro cuando BLAK esté disponible en su mercado."
+      },
+      "completeOnboarding": {
+        "title": "Complete el Registro del Operador",
+        "description": "Proporcione los documentos requeridos, detalles del seguro, información de los vehículos y conductores, y complete el Acuerdo de Operador de BLAK."
+      },
+      "operatorApproval": {
+        "title": "Aprobación del Operador",
+        "description": "Una vez revisada y aprobada toda la información y documentación requerida, su operación podrá unirse a la Red de Operadores de BLAK."
+      }
+    }
+  },
+  "networkGrowing": {
+    "subtitle": "La Red Está Creciendo",
+    "title": "Sea Parte de Lo Que Viene.",
+    "description": "BLAK está creando relaciones con hoteles, aeropuertos y otros socios de viajes mientras desarrolla una red de operadores calificados en mercados de Estados Unidos e internacionales."
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "actions": {
+    "next": "Next",
+    "continue": "Continue",
+    "back": "Back",
+    "submit": "Submit",
+    "loading": "Submitting...",
+    "cancel": "Cancel",
+    "save": "Save",
+    "close": "Close"
+  },
+  "form": {
+    "required": "Required",
+    "optional": "Optional",
+    "select": "Select an option",
+    "selectCountry": "Select country",
+    "selectAll": "Select all that apply",
+    "yes": "Yes",
+    "no": "No"
+  },
+  "validation": {
+    "required": "This field is required.",
+    "invalidEmail": "Please enter a valid email address.",
+    "invalidUrl": "Please enter a valid URL.",
+    "invalidPhone": "Please enter a valid phone number."
+  },
+  "locale": {
+    "label": "Language",
+    "en": "English",
+    "es": "Español"
+  }
+}

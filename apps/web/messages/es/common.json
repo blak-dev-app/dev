@@ -1,0 +1,32 @@
+{
+  "actions": {
+    "next": "Siguiente",
+    "continue": "Continuar",
+    "back": "Atrás",
+    "submit": "Enviar",
+    "loading": "Enviando...",
+    "cancel": "Cancelar",
+    "save": "Guardar",
+    "close": "Cerrar"
+  },
+  "form": {
+    "required": "Obligatorio",
+    "optional": "Opcional",
+    "select": "Seleccione una opción",
+    "selectCountry": "Seleccione el país",
+    "selectAll": "Seleccione todas las opciones que correspondan",
+    "yes": "Sí",
+    "no": "No"
+  },
+  "validation": {
+    "required": "Este campo es obligatorio.",
+    "invalidEmail": "Ingrese un correo electrónico válido.",
+    "invalidUrl": "Ingrese una URL válida.",
+    "invalidPhone": "Ingrese un número de teléfono válido."
+  },
+  "locale": {
+    "label": "Idioma",
+    "en": "English",
+    "es": "Español"
+  }
+}
