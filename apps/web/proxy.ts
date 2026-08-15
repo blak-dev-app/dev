@@ -5,7 +5,8 @@ export default createMiddleware(routing)
 
 export const config = {
   // Match all pathnames except for
-  // - … if they start with `/api`, `/trpc`, `/_next`, `/_vercel` or `/admin`
+  // - … if they start with `/api`, `/trpc`, `/_next`, `/_vercel`, `/admin`,
+  //   `/driver` or `/fleet-onboarding`
   // - … the ones containing a dot (e.g. `favicon.ico`)
-  matcher: "/((?!api|trpc|_next|_vercel|admin|.*\\..*).*)",
+  matcher: "/((?!api|trpc|_next|_vercel|admin|driver|fleet-onboarding|.*\\..*).*)",
 }
