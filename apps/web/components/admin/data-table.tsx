@@ -23,6 +23,8 @@ const STATUS_VARIANTS: Record<string, StatusVariant> = {
   Rejected: "destructive-light",
   Pending: "info-light",
   "Pending Review": "info-light",
+  Invited: "primary-light",
+  "Documents Submitted": "warning-light",
   "Driver Assigned": "success-light",
   Breakdown: "warning-light",
   Available: "primary-light",
