@@ -1,6 +1,5 @@
 "use client"
 import React from "react"
-import { API_URL } from "@/lib/API"
 import { useTranslations } from "next-intl"
 import { Button } from "@blak/ui/components/button"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -39,10 +38,13 @@ export const OperatorForm = () => {
         serviceTypes: values.serviceTypes.join(", "),
       }
 
-      const response = await fetch(API_URL, {
+      const response = await fetch("/api/operator-applications", {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       })
+
+      if (!response.ok) throw new Error("Request failed")
 
       open({
         variant: "success",
