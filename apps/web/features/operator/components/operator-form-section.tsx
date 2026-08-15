@@ -1,7 +1,7 @@
 import React from "react"
 import { getTranslations } from "next-intl/server"
 import { Container } from "@/components/container"
-import { OperatorForm } from "../form/operator-form"
+import { ApplicantTypeSwitcher } from "./applicant-type-switcher"
 
 export const OperatorFormSection = async () => {
   const t = await getTranslations("operator.form")
@@ -21,7 +21,7 @@ export const OperatorFormSection = async () => {
             </p>
           </div>
           <div>
-            <OperatorForm />
+            <ApplicantTypeSwitcher />
           </div>
         </div>
       </Container>
