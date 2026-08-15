@@ -37,7 +37,7 @@ export default function FleetOnboardingPage() {
         if (snap.empty) {
           setError("We couldn't find an application linked to this account.")
         } else {
-          const docSnap = snap.docs[0]
+          const docSnap = snap.docs[0]!
           setApplicationId(docSnap.id)
           setApplication(docSnap.data())
         }
