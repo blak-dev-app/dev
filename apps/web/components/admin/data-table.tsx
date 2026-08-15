@@ -18,6 +18,7 @@ const STATUS_VARIANTS: Record<string, StatusVariant> = {
   New: "info-light",
   Completed: "success-light",
   Active: "success-light",
+  Inactive: "destructive-light",
   Cancelled: "secondary",
   Approved: "success-light",
   Rejected: "destructive-light",
@@ -28,6 +29,9 @@ const STATUS_VARIANTS: Record<string, StatusVariant> = {
   "Driver Assigned": "success-light",
   Breakdown: "warning-light",
   Available: "primary-light",
+  Ongoing: "warning-light",
+  Accepted: "success-light",
+  Failed: "destructive-light",
 }
 
 export function StatusPill({ status }: { status: string }) {
