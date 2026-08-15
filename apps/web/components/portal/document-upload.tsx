@@ -87,7 +87,7 @@ export function DocumentUpload({
           <Label htmlFor={docType.key}>{docType.label}</Label>
           {existingDocuments?.[docType.key] ? (
             <a
-              href={existingDocuments[docType.key].url}
+              href={existingDocuments?.[docType.key]?.url}
               target="_blank"
               rel="noreferrer"
               className="text-xs font-medium text-primary underline"
