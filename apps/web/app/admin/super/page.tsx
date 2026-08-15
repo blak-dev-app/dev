@@ -119,6 +119,11 @@ export default function SuperAdminDashboard() {
 
   const recentTransactions = transactions.slice(0, 6)
 
+  const fleetEnquiries = fleets.length
+  const driverEnquiries = drivers.length
+  const passengerEnquiries = passengers.length
+  const totalEnquiries = fleetEnquiries + driverEnquiries + passengerEnquiries
+
   return (
     <AdminShell navItems={superNavItems} welcomeName="Admin">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -204,6 +209,32 @@ export default function SuperAdminDashboard() {
                 </div>
               ))
             )}
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-6 rounded-xl border border-border bg-card p-6">
+        <div className="flex flex-wrap items-center gap-4">
+          <span className="flex size-12 items-center justify-center rounded-lg bg-muted text-2xl">
+            ℹ️
+          </span>
+          <div>
+            <div className="text-xs font-semibold text-muted-foreground">Total Enquiries</div>
+            <div className="mt-1 text-2xl font-semibold">{totalEnquiries}</div>
+          </div>
+          <div className="ml-auto grid grid-cols-3 gap-3">
+            <div className="rounded-lg bg-muted px-6 py-3 text-center">
+              <div className="text-xs text-muted-foreground">Fleet</div>
+              <div className="text-lg font-semibold">{fleetEnquiries}</div>
+            </div>
+            <div className="rounded-lg bg-muted px-6 py-3 text-center">
+              <div className="text-xs text-muted-foreground">Driver</div>
+              <div className="text-lg font-semibold">{driverEnquiries}</div>
+            </div>
+            <div className="rounded-lg bg-muted px-6 py-3 text-center">
+              <div className="text-xs text-muted-foreground">Passenger</div>
+              <div className="text-lg font-semibold">{passengerEnquiries}</div>
+            </div>
           </div>
         </div>
       </div>
