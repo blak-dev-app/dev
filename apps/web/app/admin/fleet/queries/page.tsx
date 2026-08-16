@@ -27,7 +27,12 @@ function FleetQueriesContent() {
   const [addOpen, setAddOpen] = React.useState(false)
 
   React.useEffect(() => {
-    const q = query(collection(db, "queries"), orderBy("createdAt", "desc"))
+    // Unified `tickets` collection (shared with Super Admin's Tickets module,
+    // see PRODUCTION_READY_TRACKER.md Phase 2). `audience` scopes visibility;
+    // filtered client-side (not in the query) to avoid requiring a Firestore
+    // composite index for an equality-filter + orderBy-on-a-different-field
+    // combination — same pattern already used for `type` below.
+    const q = query(collection(db, "tickets"), orderBy("createdAt", "desc"))
     const unsub = onSnapshot(
       q,
       (snap) => {
@@ -39,7 +44,9 @@ function FleetQueriesContent() {
     return () => unsub()
   }, [])
 
-  const filtered = docs.filter(({ data: d }) => !d.type || d.type === type)
+  const filtered = docs.filter(
+    ({ data: d }) => d.audience === "fleet_admin" && (!d.type || d.type === type)
+  )
 
   const columns: Column[] =
     type === "driver"
