@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { collection, onSnapshot, orderBy, query } from "firebase/firestore"
+import Link from "next/link"
 import { db } from "@/lib/firebase"
 import { AdminShell } from "@/components/admin/admin-shell"
 import { PageHeader } from "@/components/admin/page-header"
@@ -58,6 +59,11 @@ export default function PassengersPage() {
       status,
       actions: (
         <div className="flex flex-wrap gap-2">
+          <Link href={`/admin/super/passengers/${id}`}>
+            <Button size="xs" variant="outline">
+              View
+            </Button>
+          </Link>
           <Button size="xs" variant="outline" onClick={() => setEmailTarget({ id, name, email: d.email })}>
             Email
           </Button>
