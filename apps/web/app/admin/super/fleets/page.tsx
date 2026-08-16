@@ -111,6 +111,11 @@ export default function FleetsPage() {
 
     const actions = (
       <div className="flex flex-wrap gap-2">
+        <Link href={`/admin/super/fleets/${id}`}>
+          <Button size="xs" variant="outline">
+            View
+          </Button>
+        </Link>
         {primaryAction}
         <Button
           size="xs"
