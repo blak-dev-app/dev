@@ -169,38 +169,62 @@ export interface Coupon {
 }
 
 /**
- * Two disconnected ticket systems exist today (see PRODUCTION_READY_TRACKER.md
- * Phase 2). Both are typed below as they currently exist; unifying them into
- * one canonical `Ticket` model is tracked separately and intentionally not
- * done here to avoid an unreviewed data migration.
+ * Canonical unified support-ticket model (collection: `tickets`).
+ *
+ * Replaces the two previously-disconnected `queries` (Fleet Admin) and
+ * `driverTickets` (Super Admin) collections — see PRODUCTION_READY_TRACKER.md
+ * Phase 2 for the migration rationale. `audience` decides which dashboard a
+ * ticket is shown in; `type` decides the Admin/Driver sub-view within Fleet
+ * Admin's Queries page. Legacy `queries`/`driverTickets` docs written before
+ * this migration are NOT automatically moved into `tickets` — see task
+ * "Decide + migrate" for that follow-up.
  */
+export interface Ticket {
+  id: string
+  audience?: "fleet_admin" | "super_admin"
+  type?: "admin" | "driver"
+  fleetId?: string
+  driverId?: string
+  driverName?: string
+  addedBy?: string
+  subject?: string
+  message?: string
+  status?: string
+  createdAt?: FirestoreTimestamp
+}
 
-/** Collection: `driverTickets` (Super Admin — driver-raised support tickets) */
+/** Subcollection: `tickets/{ticketId}/messages` */
+export interface TicketMessage {
+  id: string
+  sender?: "fleet" | "admin" | "driver"
+  message?: string
+  createdAt?: FirestoreTimestamp
+}
+
+/**
+ * @deprecated Legacy Fleet Admin collection, superseded by `Ticket` /
+ * collection `tickets` (audience: "fleet_admin"). Kept only for reading any
+ * pre-migration docs left in the old `queries` collection.
+ */
 export interface DriverTicket {
   id: string
   subject?: string
   createdAt?: FirestoreTimestamp
 }
 
-export type FleetQueryType = "admin" | "driver"
-
-/** Collection: `queries` (Fleet Admin — admin- or driver-raised tickets) */
+/**
+ * @deprecated Legacy Super Admin collection, superseded by `Ticket` /
+ * collection `tickets` (audience: "super_admin"). Kept only for reading any
+ * pre-migration docs left in the old `driverTickets` collection.
+ */
 export interface FleetQuery {
   id: string
-  type?: FleetQueryType
+  type?: "admin" | "driver"
   subject?: string
   message?: string
   status?: string
   addedBy?: string
   driverName?: string
-  createdAt?: FirestoreTimestamp
-}
-
-/** Subcollection: `queries/{queryId}/messages` */
-export interface FleetQueryMessage {
-  id: string
-  sender?: "fleet" | "admin" | "driver"
-  message?: string
   createdAt?: FirestoreTimestamp
 }
 
