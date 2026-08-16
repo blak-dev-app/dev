@@ -5,6 +5,7 @@ import { collection, onSnapshot, orderBy, query } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { AdminShell } from "@/components/admin/admin-shell"
 import { superNavItems } from "@/lib/admin/nav"
+import { DateRangeFilter, isWithinDateRange, type DateRangeValue } from "@/components/admin/date-range-filter"
 
 type Doc = Record<string, any>
 
@@ -76,6 +77,8 @@ export default function SuperAdminDashboard() {
   const [passengers, setPassengers] = React.useState<Doc[]>([])
   const [rides, setRides] = React.useState<Doc[]>([])
   const [transactions, setTransactions] = React.useState<Doc[]>([])
+  const [rideRange, setRideRange] = React.useState<DateRangeValue>("all")
+  const [plRange, setPlRange] = React.useState<DateRangeValue>("all")
 
   React.useEffect(() => {
     const unsubs = [
@@ -106,14 +109,18 @@ export default function SuperAdminDashboard() {
     .filter((t) => t.type === "credit")
     .reduce((sum, t) => sum + (Number(t.amount) || 0), 0)
 
-  const totalRides = rides.length
-  const completed = rides.filter((r) => r.status === "Completed").length
-  const running = rides.filter((r) => r.status === "Running").length
-  const cancelled = rides.filter((r) => r.status === "Cancelled").length
+  const ridesInRange = rides.filter((r) => isWithinDateRange(r.createdAt, rideRange))
+  const totalRides = ridesInRange.length
+  const completed = ridesInRange.filter((r) => r.status === "Completed").length
+  const running = ridesInRange.filter((r) => r.status === "Running").length
+  const cancelled = ridesInRange.filter((r) => r.status === "Cancelled").length
   const pct = (n: number) => (totalRides ? Math.round((n / totalRides) * 100) : 0)
 
-  const totalProfit = totalRevenue
-  const totalLoss = transactions
+  const transactionsInRange = transactions.filter((t) => isWithinDateRange(t.createdAt, plRange))
+  const totalProfit = transactionsInRange
+    .filter((t) => t.type === "credit")
+    .reduce((sum, t) => sum + (Number(t.amount) || 0), 0)
+  const totalLoss = transactionsInRange
     .filter((t) => t.type === "debit")
     .reduce((sum, t) => sum + (Number(t.amount) || 0), 0)
 
@@ -146,7 +153,7 @@ export default function SuperAdminDashboard() {
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
         <div className="rounded-xl border border-border bg-card p-6">
           <h3 className="mb-4 flex items-center justify-between text-sm font-semibold">
-            Ride Status <span className="text-xs text-muted-foreground">Today ▾</span>
+            Ride Status <DateRangeFilter value={rideRange} onChange={setRideRange} />
           </h3>
           <div className="mb-4 text-xs text-muted-foreground">
             Total Rides <span className="ml-1 text-sm font-semibold text-foreground">{totalRides}</span>
@@ -156,14 +163,14 @@ export default function SuperAdminDashboard() {
           <StatusRow label="Cancelled" count={cancelled} pct={pct(cancelled)} />
           {totalRides === 0 && (
             <p className="mt-2 text-[11px] text-muted-foreground">
-              No rides yet — ride booking isn&apos;t live.
+              No rides {rideRange === "all" ? "yet — ride booking isn't live." : "in this date range."}
             </p>
           )}
         </div>
 
         <div className="rounded-xl border border-border bg-card p-6">
           <h3 className="mb-4 flex items-center justify-between text-sm font-semibold">
-            Profit &amp; Loss <span className="text-xs text-muted-foreground">Today ▾</span>
+            Profit &amp; Loss <DateRangeFilter value={plRange} onChange={setPlRange} />
           </h3>
           <div className="grid grid-cols-2 gap-4">
             <div className="rounded-lg bg-success-light p-4">
@@ -181,7 +188,7 @@ export default function SuperAdminDashboard() {
 
         <div className="rounded-xl border border-border bg-card p-6">
           <h3 className="mb-4 flex items-center justify-between text-sm font-semibold">
-            Transactions <span className="text-xs text-muted-foreground">Month ▾</span>
+            Transactions <span className="text-xs text-muted-foreground">Recent</span>
           </h3>
           <div className="flex flex-col gap-3">
             {recentTransactions.length === 0 ? (
