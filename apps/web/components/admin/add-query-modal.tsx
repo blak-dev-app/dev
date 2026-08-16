@@ -18,7 +18,11 @@ export function AddQueryModal({ open, onClose }: { open: boolean; onClose: () =>
     if (!subject.trim()) return
     setSaving(true)
     try {
-      await addDoc(collection(db, "queries"), {
+      // Writes to the unified `tickets` collection (shared with Super Admin's
+      // Tickets module). `audience` controls which dashboard shows this ticket;
+      // `type` controls the Admin/Driver sub-view within Fleet Admin's Queries page.
+      await addDoc(collection(db, "tickets"), {
+        audience: "fleet_admin",
         type: "admin",
         subject,
         message,
