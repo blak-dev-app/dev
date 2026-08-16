@@ -3,7 +3,7 @@
 import * as React from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { Bell, Search } from "lucide-react"
 import {
   collection,
@@ -12,7 +12,8 @@ import {
   orderBy,
   query,
 } from "firebase/firestore"
-import { db } from "@/lib/firebase"
+import { onAuthStateChanged, signOut } from "firebase/auth"
+import { auth, db } from "@/lib/firebase"
 import { cn } from "@blak/ui/lib/utils"
 import type { AdminNavItem } from "@/lib/admin/nav"
 
@@ -137,9 +138,16 @@ function NotificationBell() {
 }
 
 function ProfileMenu({ welcomeName }: { welcomeName?: string }) {
+  const router = useRouter()
   const [open, setOpen] = React.useState(false)
   const ref = React.useRef<HTMLDivElement>(null)
   useClickOutside(ref, () => setOpen(false))
+
+  async function handleLogout() {
+    setOpen(false)
+    await signOut(auth)
+    router.push("/")
+  }
 
   return (
     <div className="relative" ref={ref}>
@@ -164,12 +172,13 @@ function ProfileMenu({ welcomeName }: { welcomeName?: string }) {
             >
               Back to site
             </Link>
-            <Link
-              href="/"
-              className="rounded-lg px-2.5 py-2 text-sm text-destructive transition-colors hover:bg-destructive/10"
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="rounded-lg px-2.5 py-2 text-left text-sm text-destructive transition-colors hover:bg-destructive/10"
             >
               Log out
-            </Link>
+            </button>
           </nav>
         </div>
       )}
@@ -179,6 +188,26 @@ function ProfileMenu({ welcomeName }: { welcomeName?: string }) {
 
 export function AdminShell({ navItems, welcomeName, children }: AdminShellProps) {
   const pathname = usePathname()
+  const router = useRouter()
+  const [authChecked, setAuthChecked] = React.useState(false)
+
+  React.useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        setAuthChecked(true)
+      } else {
+        const loginHref = pathname?.startsWith("/admin/fleet")
+          ? "/admin/fleet/login"
+          : "/admin/super/login"
+        router.replace(loginHref)
+      }
+    })
+    return () => unsub()
+  }, [pathname, router])
+
+  if (!authChecked) {
+    return null
+  }
 
   return (
     <div className="flex min-h-screen bg-background">
