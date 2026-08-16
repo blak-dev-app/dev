@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { collection, onSnapshot, orderBy, query } from "firebase/firestore"
+import Link from "next/link"
 import { db } from "@/lib/firebase"
 import { AdminShell } from "@/components/admin/admin-shell"
 import { PageHeader } from "@/components/admin/page-header"
@@ -15,6 +16,7 @@ const columns: Column[] = [
   { key: "registered", label: "Registered on" },
   { key: "addedBy", label: "Added by" },
   { key: "status", label: "Status" },
+  { key: "actions", label: "Actions" },
 ]
 
 function formatDate(ts: any) {
@@ -24,7 +26,7 @@ function formatDate(ts: any) {
 }
 
 export default function TicketsPage() {
-  const [rows, setRows] = React.useState<Record<string, React.ReactNode>[]>([])
+  const [docs, setDocs] = React.useState<{ id: string; data: any }[]>([])
   const [loading, setLoading] = React.useState(true)
   const [error, setError] = React.useState("")
 
@@ -33,18 +35,7 @@ export default function TicketsPage() {
     const unsub = onSnapshot(
       q,
       (snap) => {
-        setRows(
-          snap.docs.map((docSnap, i) => {
-            const d = docSnap.data()
-            return {
-              idx: i + 1,
-              ticket: d.subject || "—",
-              registered: formatDate(d.createdAt),
-              addedBy: "Driver App",
-              status: "New",
-            }
-          })
-        )
+        setDocs(snap.docs.map((d) => ({ id: d.id, data: d.data() })))
         setLoading(false)
       },
       () => {
@@ -54,6 +45,21 @@ export default function TicketsPage() {
     )
     return () => unsub()
   }, [])
+
+  const rows = docs.map(({ id, data: d }, i) => ({
+    idx: i + 1,
+    ticket: d.subject || "—",
+    registered: formatDate(d.createdAt),
+    addedBy: "Driver App",
+    status: d.status || "New",
+    actions: (
+      <Link href={`/admin/super/tickets/${id}`}>
+        <Button size="xs" variant="outline">
+          View
+        </Button>
+      </Link>
+    ),
+  }))
 
   return (
     <AdminShell navItems={superNavItems} welcomeName="Admin">
