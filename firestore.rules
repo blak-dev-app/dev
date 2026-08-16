@@ -1,0 +1,50 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /driverApplications/{docId} {
+      allow create: if true;
+      allow read: if true;
+      allow update: if request.resource.data.status != "Active";
+    }
+    match /fleetApplications/{docId} {
+      allow create: if true;
+      allow read: if true;
+      allow update: if request.resource.data.status != "Active";
+    }
+    match /driverTickets/{docId} {
+      allow create: if true;
+      allow read: if true;
+    }
+    match /queries/{docId} {
+      allow create: if true;
+      allow read: if true;
+    }
+    match /tickets/{docId} {
+      allow create: if true;
+      allow read: if true;
+      allow update: if true;
+      match /messages/{msgId} {
+        allow create: if true;
+        allow read: if true;
+      }
+    }
+    match /passengers/{docId} {
+      allow create: if true;
+      allow read: if true;
+    }
+    match /transactions/{docId} {
+      allow create: if true;
+      allow read: if true;
+    }
+    match /rides/{docId} {
+      allow create: if true;
+      allow read: if true;
+    }
+    match /vehicles/{docId} {
+      allow create: if true;
+      allow read: if true;
+      allow update: if true;
+    }
+  }
+}
