@@ -34,8 +34,9 @@ export default function TicketDetailPage() {
 
   React.useEffect(() => {
     if (!params?.id) return
+    // Unified `tickets` collection — see PRODUCTION_READY_TRACKER.md Phase 2.
     const unsub = onSnapshot(
-      doc(db, "driverTickets", params.id),
+      doc(db, "tickets", params.id),
       (snap) => {
         setData(snap.exists() ? snap.data() : null)
         setLoading(false)
@@ -47,7 +48,7 @@ export default function TicketDetailPage() {
 
   React.useEffect(() => {
     if (!params?.id) return
-    const q = query(collection(db, "driverTickets", params.id, "messages"), orderBy("createdAt", "asc"))
+    const q = query(collection(db, "tickets", params.id, "messages"), orderBy("createdAt", "asc"))
     const unsub = onSnapshot(q, (snap) => setMessages(snap.docs.map((d) => ({ id: d.id, data: d.data() }))), () =>
       setMessages([])
     )
@@ -59,7 +60,7 @@ export default function TicketDetailPage() {
     if (!reply.trim() || !params?.id) return
     setSending(true)
     try {
-      await addDoc(collection(db, "driverTickets", params.id, "messages"), {
+      await addDoc(collection(db, "tickets", params.id, "messages"), {
         sender: "admin",
         message: reply,
         createdAt: serverTimestamp(),
@@ -96,6 +97,9 @@ export default function TicketDetailPage() {
               </span>
             </div>
             <div className="text-xs text-muted-foreground">Registered on: {formatDateTime(data.createdAt)}</div>
+            {data.driverName ? (
+              <div className="mt-1 text-xs text-muted-foreground">Raised by: {data.driverName}</div>
+            ) : null}
             <div className="mt-6">
               <h4 className="mb-2 text-sm font-semibold">Subject</h4>
               <p className="text-sm text-muted-foreground">{data.subject || "—"}</p>
@@ -114,7 +118,9 @@ export default function TicketDetailPage() {
               ) : (
                 messages.map(({ id, data: m }) => (
                   <div key={id} className="rounded-lg bg-muted/40 p-2 text-xs">
-                    <div className="font-medium">{m.sender === "admin" ? "Admin" : "User"}</div>
+                    <div className="font-medium">
+                      {m.sender === "admin" ? "Super Admin" : m.sender === "fleet" ? "Fleet Admin" : "Driver"}
+                    </div>
                     <div className="mt-1 text-muted-foreground">{m.message}</div>
                     <div className="mt-1 text-[10px] text-muted-foreground">{formatDateTime(m.createdAt)}</div>
                   </div>
