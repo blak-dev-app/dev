@@ -7,6 +7,7 @@ import { db } from "@/lib/firebase"
 import { AdminShell } from "@/components/admin/admin-shell"
 import { PageHeader } from "@/components/admin/page-header"
 import { DataTable, Pagination, type Column } from "@/components/admin/data-table"
+import { StatusFilter } from "@/components/admin/status-filter"
 import { superNavItems } from "@/lib/admin/nav"
 import { Button } from "@blak/ui/components/button"
 import { SendEmailModal } from "@/components/admin/send-email-modal"
@@ -22,6 +23,9 @@ const columns: Column[] = [
   { key: "actions", label: "Actions" },
 ]
 
+const STATUS_OPTIONS = ["Available", "On Trip", "Inactive"]
+const PAGE_SIZE = 10
+
 function formatDate(ts: any) {
   if (!ts) return "—"
   const d = ts.toDate ? ts.toDate() : new Date(ts)
@@ -33,6 +37,9 @@ export default function VehiclesPage() {
   const [loading, setLoading] = React.useState(true)
   const [emailTarget, setEmailTarget] = React.useState<{ id: string; name: string; email?: string } | null>(null)
   const [statusTarget, setStatusTarget] = React.useState<{ id: string; name: string; status: string } | null>(null)
+  const [searchTerm, setSearchTerm] = React.useState("")
+  const [statusFilter, setStatusFilter] = React.useState<string | null>(null)
+  const [page, setPage] = React.useState(1)
 
   React.useEffect(() => {
     const q = query(collection(db, "vehicles"), orderBy("createdAt", "desc"))
@@ -47,11 +54,29 @@ export default function VehiclesPage() {
     return () => unsub()
   }, [])
 
-  const rows = docs.map(({ id, data: d }, i) => {
+  React.useEffect(() => {
+    setPage(1)
+  }, [searchTerm, statusFilter])
+
+  const filteredDocs = docs.filter(({ data: d }) => {
+    const status = d.status || "Available"
+    if (statusFilter && status !== statusFilter) return false
+    const term = searchTerm.trim().toLowerCase()
+    if (term) {
+      const haystack = `${d.fleetName || ""} ${d.driverName || ""} ${d.driverId || ""} ${d.driverEmail || ""}`.toLowerCase()
+      if (!haystack.includes(term)) return false
+    }
+    return true
+  })
+
+  const pageCount = Math.max(1, Math.ceil(filteredDocs.length / PAGE_SIZE))
+  const pagedDocs = filteredDocs.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+
+  const rows = pagedDocs.map(({ id, data: d }, i) => {
     const status = d.status || "Available"
     const name = d.driverName || d.vehicleName || `Vehicle ${i + 1}`
     return {
-      idx: i + 1,
+      idx: (page - 1) * PAGE_SIZE + i + 1,
       added: formatDate(d.createdAt),
       fleet: d.fleetName || "—",
       driver: d.driverName || "—",
@@ -75,15 +100,15 @@ export default function VehiclesPage() {
     }
   })
 
+  const isFiltered = Boolean(statusFilter) || Boolean(searchTerm.trim())
+
   return (
-    <AdminShell navItems={superNavItems} welcomeName="Admin">
+    <AdminShell navItems={superNavItems} welcomeName="Admin" searchValue={searchTerm} onSearchChange={setSearchTerm}>
       <PageHeader
         title="VEHICLES"
         actions={
           <>
-            <Button variant="outline" size="sm">
-              Filter by Status ▾
-            </Button>
+            <StatusFilter options={STATUS_OPTIONS} value={statusFilter} onChange={setStatusFilter} />
             <Button size="sm">+ Add Vehicle</Button>
           </>
         }
@@ -93,14 +118,18 @@ export default function VehiclesPage() {
       </p>
       {loading ? (
         <p className="text-sm text-muted-foreground">Loading…</p>
-      ) : rows.length === 0 ? (
+      ) : docs.length === 0 ? (
         <p className="text-sm text-muted-foreground">
           No vehicles yet. Vehicles added by fleets will appear here automatically.
+        </p>
+      ) : filteredDocs.length === 0 ? (
+        <p className="text-sm text-muted-foreground">
+          No vehicles match your {isFiltered ? "search/filter" : "search"}.
         </p>
       ) : (
         <>
           <DataTable columns={columns} rows={rows} />
-          <Pagination />
+          <Pagination page={page} pageCount={pageCount} onPageChange={setPage} />
         </>
       )}
 
