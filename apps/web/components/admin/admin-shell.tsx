@@ -23,6 +23,27 @@ type AdminShellProps = {
   children: React.ReactNode
 }
 
+/**
+ * Shared search-box state. The header search input (rendered once, inside
+ * AdminShell) writes into this context; individual list pages read
+ * `searchTerm` via `useAdminSearch()` to actually filter their own rows.
+ * This is what makes the header "Search" box a real, working search instead
+ * of decorative markup.
+ */
+type AdminSearchContextValue = {
+  searchTerm: string
+  setSearchTerm: (value: string) => void
+}
+
+const AdminSearchContext = React.createContext<AdminSearchContextValue>({
+  searchTerm: "",
+  setSearchTerm: () => {},
+})
+
+export function useAdminSearch() {
+  return React.useContext(AdminSearchContext)
+}
+
 function initials(name?: string) {
   if (!name) return "AD"
   return name
@@ -190,6 +211,7 @@ export function AdminShell({ navItems, welcomeName, children }: AdminShellProps)
   const pathname = usePathname()
   const router = useRouter()
   const [authChecked, setAuthChecked] = React.useState(false)
+  const [searchTerm, setSearchTerm] = React.useState("")
 
   React.useEffect(() => {
     const unsub = onAuthStateChanged(auth, (user) => {
@@ -205,74 +227,85 @@ export function AdminShell({ navItems, welcomeName, children }: AdminShellProps)
     return () => unsub()
   }, [pathname, router])
 
+  // Clear the search box whenever the admin navigates to a different page,
+  // so a stale search term from the previous list doesn't silently filter
+  // out everything on the new one.
+  React.useEffect(() => {
+    setSearchTerm("")
+  }, [pathname])
+
   if (!authChecked) {
     return null
   }
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <aside className="hidden w-64 shrink-0 flex-col border-r border-border bg-card px-4 py-6 lg:flex">
-        <Link href="/" className="mb-8 block px-2">
-          <Image src="/logo/logo.png" width={120} height={32} alt="BLAK" />
-        </Link>
-        <nav className="flex flex-col gap-1">
-          {navItems.map((item) => {
-            const active = item.subItems
-              ? pathname.startsWith(item.href)
-              : pathname === item.href
-            return (
-              <div key={item.label}>
-                <Link
-                  href={item.href}
-                  className={cn(
-                    "block rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
-                    active
-                      ? "bg-primary/10 text-primary"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+    <AdminSearchContext.Provider value={{ searchTerm, setSearchTerm }}>
+      <div className="flex min-h-screen bg-background">
+        <aside className="hidden w-64 shrink-0 flex-col border-r border-border bg-card px-4 py-6 lg:flex">
+          <Link href="/" className="mb-8 block px-2">
+            <Image src="/logo/logo.png" width={120} height={32} alt="BLAK" />
+          </Link>
+          <nav className="flex flex-col gap-1">
+            {navItems.map((item) => {
+              const active = item.subItems
+                ? pathname.startsWith(item.href)
+                : pathname === item.href
+              return (
+                <div key={item.label}>
+                  <Link
+                    href={item.href}
+                    className={cn(
+                      "block rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                      active
+                        ? "bg-primary/10 text-primary"
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    )}
+                  >
+                    {item.label}
+                  </Link>
+                  {item.subItems && (
+                    <div className="mt-1 ml-3 flex flex-col gap-1 border-l border-border pl-3">
+                      {item.subItems.map((sub) => (
+                        <Link
+                          key={sub.label}
+                          href={sub.href}
+                          className={cn(
+                            "rounded-md px-2 py-1.5 text-xs font-medium transition-colors",
+                            pathname === sub.href
+                              ? "text-primary"
+                              : "text-muted-foreground hover:text-foreground"
+                          )}
+                        >
+                          {sub.label}
+                        </Link>
+                      ))}
+                    </div>
                   )}
-                >
-                  {item.label}
-                </Link>
-                {item.subItems && (
-                  <div className="mt-1 ml-3 flex flex-col gap-1 border-l border-border pl-3">
-                    {item.subItems.map((sub) => (
-                      <Link
-                        key={sub.label}
-                        href={sub.href}
-                        className={cn(
-                          "rounded-md px-2 py-1.5 text-xs font-medium transition-colors",
-                          pathname === sub.href
-                            ? "text-primary"
-                            : "text-muted-foreground hover:text-foreground"
-                        )}
-                      >
-                        {sub.label}
-                      </Link>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )
-          })}
-        </nav>
-      </aside>
+                </div>
+              )
+            })}
+          </nav>
+        </aside>
 
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex items-center justify-between gap-4 border-b border-border px-6 py-4">
-          <div className="flex h-10 w-full max-w-xs items-center gap-2 rounded-lg border border-border bg-input/30 px-3">
-            <Search className="size-4 text-muted-foreground" />
-            <input
-              placeholder="Search"
-              className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
-            />
-          </div>
-          <div className="flex items-center gap-4">
-            <NotificationBell />
-            <ProfileMenu welcomeName={welcomeName} />
-          </div>
-        </header>
-        <main className="flex-1 px-6 py-8">{children}</main>
+        <div className="flex min-w-0 flex-1 flex-col">
+          <header className="flex items-center justify-between gap-4 border-b border-border px-6 py-4">
+            <div className="flex h-10 w-full max-w-xs items-center gap-2 rounded-lg border border-border bg-input/30 px-3">
+              <Search className="size-4 text-muted-foreground" />
+              <input
+                placeholder="Search"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+              />
+            </div>
+            <div className="flex items-center gap-4">
+              <NotificationBell />
+              <ProfileMenu welcomeName={welcomeName} />
+            </div>
+          </header>
+          <main className="flex-1 px-6 py-8">{children}</main>
+        </div>
       </div>
-    </div>
+    </AdminSearchContext.Provider>
   )
 }
