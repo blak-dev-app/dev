@@ -34,8 +34,9 @@ export default function FleetQueryDetailPage() {
 
   React.useEffect(() => {
     if (!params?.id) return
+    // Unified `tickets` collection — see PRODUCTION_READY_TRACKER.md Phase 2.
     const unsub = onSnapshot(
-      doc(db, "queries", params.id),
+      doc(db, "tickets", params.id),
       (snap) => {
         setData(snap.exists() ? snap.data() : null)
         setLoading(false)
@@ -47,7 +48,7 @@ export default function FleetQueryDetailPage() {
 
   React.useEffect(() => {
     if (!params?.id) return
-    const q = query(collection(db, "queries", params.id, "messages"), orderBy("createdAt", "asc"))
+    const q = query(collection(db, "tickets", params.id, "messages"), orderBy("createdAt", "asc"))
     const unsub = onSnapshot(q, (snap) => setMessages(snap.docs.map((d) => ({ id: d.id, data: d.data() }))), () =>
       setMessages([])
     )
@@ -59,7 +60,7 @@ export default function FleetQueryDetailPage() {
     if (!reply.trim() || !params?.id) return
     setSending(true)
     try {
-      await addDoc(collection(db, "queries", params.id, "messages"), {
+      await addDoc(collection(db, "tickets", params.id, "messages"), {
         sender: "fleet",
         message: reply,
         createdAt: serverTimestamp(),

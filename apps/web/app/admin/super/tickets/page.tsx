@@ -1,8 +1,8 @@
 "use client"
 
 import * as React from "react"
-import { collection, onSnapshot, orderBy, query } from "firebase/firestore"
 import Link from "next/link"
+import { collection, onSnapshot, orderBy, query } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { AdminShell } from "@/components/admin/admin-shell"
 import { PageHeader } from "@/components/admin/page-header"
@@ -26,16 +26,40 @@ function formatDate(ts: any) {
 }
 
 export default function TicketsPage() {
-  const [docs, setDocs] = React.useState<{ id: string; data: any }[]>([])
+  const [rows, setRows] = React.useState<Record<string, React.ReactNode>[]>([])
   const [loading, setLoading] = React.useState(true)
   const [error, setError] = React.useState("")
 
   React.useEffect(() => {
-    const q = query(collection(db, "driverTickets"), orderBy("createdAt", "desc"))
+    // Unified `tickets` collection (shared with Fleet Admin's Queries module,
+    // see PRODUCTION_READY_TRACKER.md Phase 2). `audience` filtered
+    // client-side — same reasoning as Fleet Admin's Queries page — to avoid
+    // requiring a Firestore composite index.
+    const q = query(collection(db, "tickets"), orderBy("createdAt", "desc"))
     const unsub = onSnapshot(
       q,
       (snap) => {
-        setDocs(snap.docs.map((d) => ({ id: d.id, data: d.data() })))
+        setRows(
+          snap.docs
+            .filter((docSnap) => docSnap.data().audience === "super_admin")
+            .map((docSnap, i) => {
+              const d = docSnap.data()
+              return {
+                idx: i + 1,
+                ticket: d.subject || "—",
+                registered: formatDate(d.createdAt),
+                addedBy: d.driverName || d.addedBy || "Driver App",
+                status: d.status || "New",
+                actions: (
+                  <Link href={`/admin/super/tickets/${docSnap.id}`}>
+                    <Button size="xs" variant="outline">
+                      View
+                    </Button>
+                  </Link>
+                ),
+              }
+            })
+        )
         setLoading(false)
       },
       () => {
@@ -45,21 +69,6 @@ export default function TicketsPage() {
     )
     return () => unsub()
   }, [])
-
-  const rows = docs.map(({ id, data: d }, i) => ({
-    idx: i + 1,
-    ticket: d.subject || "—",
-    registered: formatDate(d.createdAt),
-    addedBy: "Driver App",
-    status: d.status || "New",
-    actions: (
-      <Link href={`/admin/super/tickets/${id}`}>
-        <Button size="xs" variant="outline">
-          View
-        </Button>
-      </Link>
-    ),
-  }))
 
   return (
     <AdminShell navItems={superNavItems} welcomeName="Admin">
