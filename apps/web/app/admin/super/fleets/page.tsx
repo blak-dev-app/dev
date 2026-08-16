@@ -9,6 +9,8 @@ import { PageHeader } from "@/components/admin/page-header"
 import { DataTable, Pagination, type Column } from "@/components/admin/data-table"
 import { superNavItems } from "@/lib/admin/nav"
 import { Button } from "@blak/ui/components/button"
+import { SendEmailModal } from "@/components/admin/send-email-modal"
+import { EditStatusModal } from "@/components/admin/edit-status-modal"
 
 const columns: Column[] = [
   { key: "idx", label: "S. No." },
@@ -33,6 +35,8 @@ export default function FleetsPage() {
   const [error, setError] = React.useState("")
   const [invitingId, setInvitingId] = React.useState<string | null>(null)
   const [inviteLink, setInviteLink] = React.useState<string | null>(null)
+  const [emailTarget, setEmailTarget] = React.useState<{ id: string; name: string; email?: string } | null>(null)
+  const [statusTarget, setStatusTarget] = React.useState<{ id: string; name: string; status: string } | null>(null)
 
   React.useEffect(() => {
     const q = query(collection(db, "fleetApplications"), orderBy("createdAt", "desc"))
@@ -70,10 +74,11 @@ export default function FleetsPage() {
     const status = d.status || "Pending Review"
     const setStatus = (next: string) =>
       updateDoc(doc(db, "fleetApplications", id), { status: next }).catch(() => {})
+    const name = d.fleetName || "—"
 
-    let actions: React.ReactNode = "—"
+    let primaryAction: React.ReactNode = "—"
     if (status === "Pending Review") {
-      actions = (
+      primaryAction = (
         <div className="flex gap-2">
           <Button size="xs" variant="outline" onClick={() => setStatus("Approved")}>
             Approve
@@ -89,13 +94,13 @@ export default function FleetsPage() {
         </div>
       )
     } else if (status === "Approved" || status === "Invited") {
-      actions = (
+      primaryAction = (
         <Button size="xs" variant="outline" disabled={invitingId === id} onClick={() => sendInvite(id)}>
           {invitingId === id ? "Sending…" : status === "Invited" ? "Resend Invite" : "Send Invite"}
         </Button>
       )
     } else if (status === "Documents Submitted") {
-      actions = (
+      primaryAction = (
         <Link href={`/admin/super/fleets/${id}`}>
           <Button size="xs" variant="outline">
             Review
@@ -104,9 +109,29 @@ export default function FleetsPage() {
       )
     }
 
+    const actions = (
+      <div className="flex flex-wrap gap-2">
+        {primaryAction}
+        <Button
+          size="xs"
+          variant="outline"
+          onClick={() => setEmailTarget({ id, name, email: d.email })}
+        >
+          Email
+        </Button>
+        <Button
+          size="xs"
+          variant="outline"
+          onClick={() => setStatusTarget({ id, name, status })}
+        >
+          Edit status
+        </Button>
+      </div>
+    )
+
     return {
       idx: i + 1,
-      name: d.fleetName || "—",
+      name,
       owner: d.businessName || "—",
       vehicles: d.vehicles ?? "—",
       source: d.source === "rideblak.com" ? "rideblak.com" : "Website",
@@ -157,6 +182,24 @@ export default function FleetsPage() {
           <Pagination />
         </>
       )}
+
+      <SendEmailModal
+        open={!!emailTarget}
+        onClose={() => setEmailTarget(null)}
+        recipientName={emailTarget?.name || ""}
+        recipientEmail={emailTarget?.email}
+        sourceCollection="fleetApplications"
+        sourceId={emailTarget?.id || ""}
+      />
+      <EditStatusModal
+        open={!!statusTarget}
+        onClose={() => setStatusTarget(null)}
+        title={statusTarget?.name || ""}
+        collectionName="fleetApplications"
+        docId={statusTarget?.id || ""}
+        currentStatus={statusTarget?.status}
+        options={["Approved", "Pending Review", "Rejected"]}
+      />
     </AdminShell>
   )
 }
