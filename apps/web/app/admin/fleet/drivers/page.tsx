@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import Link from "next/link"
 import { collection, onSnapshot, orderBy, query } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { AdminShell } from "@/components/admin/admin-shell"
@@ -12,6 +13,7 @@ import { Button } from "@blak/ui/components/button"
 const columns: Column[] = [
   { key: "idx", label: "S. No." },
   { key: "name", label: "Driver name" },
+  { key: "driverId", label: "Driver ID" },
   { key: "registered", label: "Registered on" },
   { key: "email", label: "Email" },
   { key: "mobile", label: "Mobile" },
@@ -37,17 +39,30 @@ export default function FleetDriversPage() {
         setRows(
           snap.docs.map((docSnap, i) => {
             const d = docSnap.data()
+            const id = docSnap.id
             return {
               idx: i + 1,
-              name: d.fullName || d.username || "—",
+              name: (
+                <Link href={`/admin/fleet/drivers/${id}`} className="font-medium hover:underline">
+                  {d.fullName || d.username || "—"}
+                </Link>
+              ),
+              driverId: id.slice(0, 8).toUpperCase(),
               registered: formatDate(d.createdAt),
               email: d.email || "—",
               mobile: d.phone || "—",
               status: d.status === "Approved" ? "Active" : d.status || "Pending",
               actions: (
-                <Button size="xs" variant="outline" asChild>
-                  <a href={d.email ? `mailto:${d.email}` : "#"}>Contact</a>
-                </Button>
+                <div className="flex flex-wrap gap-2">
+                  <Link href={`/admin/fleet/drivers/${id}`}>
+                    <Button size="xs" variant="outline">
+                      View
+                    </Button>
+                  </Link>
+                  <Button size="xs" variant="outline" asChild>
+                    <a href={d.email ? `mailto:${d.email}` : "#"}>Contact</a>
+                  </Button>
+                </div>
               ),
             }
           })
