@@ -4,7 +4,7 @@ import * as React from "react"
 import Link from "next/link"
 import { collection, doc, onSnapshot, orderBy, query, updateDoc } from "firebase/firestore"
 import { db } from "@/lib/firebase"
-import { AdminShell, useAdminSearch } from "@/components/admin/admin-shell"
+import { AdminShell } from "@/components/admin/admin-shell"
 import { PageHeader } from "@/components/admin/page-header"
 import { DataTable, Pagination, type Column } from "@/components/admin/data-table"
 import { StatusFilter } from "@/components/admin/status-filter"
@@ -41,7 +41,7 @@ export default function SuperDriversPage() {
   const [inviteLink, setInviteLink] = React.useState<string | null>(null)
   const [emailTarget, setEmailTarget] = React.useState<{ id: string; name: string; email?: string } | null>(null)
   const [statusTarget, setStatusTarget] = React.useState<{ id: string; name: string; status: string } | null>(null)
-  const { searchTerm } = useAdminSearch()
+  const [searchTerm, setSearchTerm] = React.useState("")
   const [statusFilter, setStatusFilter] = React.useState<string | null>(null)
   const [page, setPage] = React.useState(1)
 
@@ -176,7 +176,12 @@ export default function SuperDriversPage() {
   const isFiltered = Boolean(statusFilter) || Boolean(searchTerm.trim())
 
   return (
-    <AdminShell navItems={superNavItems} welcomeName="Admin">
+    <AdminShell
+      navItems={superNavItems}
+      welcomeName="Admin"
+      searchValue={searchTerm}
+      onSearchChange={setSearchTerm}
+    >
       <PageHeader
         title="DRIVERS"
         actions={
