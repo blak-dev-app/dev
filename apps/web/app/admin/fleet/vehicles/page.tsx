@@ -8,6 +8,7 @@ import { PageHeader } from "@/components/admin/page-header"
 import { DataTable, Pagination, type Column } from "@/components/admin/data-table"
 import { fleetNavItems } from "@/lib/admin/nav"
 import { Button } from "@blak/ui/components/button"
+import { AssignDriverModal } from "@/components/admin/assign-driver-modal"
 
 const columns: Column[] = [
   { key: "idx", label: "S. No." },
@@ -25,38 +26,42 @@ function formatDate(ts: any) {
 }
 
 export default function FleetVehiclesPage() {
-  const [rows, setRows] = React.useState<Record<string, React.ReactNode>[]>([])
+  const [docs, setDocs] = React.useState<{ id: string; data: any }[]>([])
   const [loading, setLoading] = React.useState(true)
+  const [assignTarget, setAssignTarget] = React.useState<{ id: string; label: string } | null>(null)
 
   React.useEffect(() => {
     const q = query(collection(db, "vehicles"), orderBy("createdAt", "desc"))
     const unsub = onSnapshot(
       q,
       (snap) => {
-        setRows(
-          snap.docs.map((docSnap, i) => {
-            const d = docSnap.data()
-            const status = d.status || "Available"
-            return {
-              idx: i + 1,
-              added: formatDate(d.createdAt),
-              driver: d.driverName || "—",
-              driverId: d.driverId || "—",
-              status,
-              actions: (
-                <Button size="xs" variant="outline">
-                  {status === "Driver Assigned" ? "Reassign" : "Assign"}
-                </Button>
-              ),
-            }
-          })
-        )
+        setDocs(snap.docs.map((d) => ({ id: d.id, data: d.data() })))
         setLoading(false)
       },
       () => setLoading(false)
     )
     return () => unsub()
   }, [])
+
+  const rows = docs.map(({ id, data: d }, i) => {
+    const status = d.status || "Available"
+    return {
+      idx: i + 1,
+      added: formatDate(d.createdAt),
+      driver: d.driverName || "—",
+      driverId: d.driverId || "—",
+      status,
+      actions: (
+        <Button
+          size="xs"
+          variant="outline"
+          onClick={() => setAssignTarget({ id, label: d.vehicleType || d.driverName || "" })}
+        >
+          {status === "Driver Assigned" ? "Reassign" : "Assign"}
+        </Button>
+      ),
+    }
+  })
 
   return (
     <AdminShell navItems={fleetNavItems} welcomeName="Fleet Admin">
@@ -81,6 +86,13 @@ export default function FleetVehiclesPage() {
           <Pagination />
         </>
       )}
+
+      <AssignDriverModal
+        open={!!assignTarget}
+        onClose={() => setAssignTarget(null)}
+        vehicleId={assignTarget?.id || ""}
+        vehicleLabel={assignTarget?.label}
+      />
     </AdminShell>
   )
 }
