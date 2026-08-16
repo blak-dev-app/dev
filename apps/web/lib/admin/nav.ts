@@ -6,10 +6,14 @@ export type AdminNavItem = {
 
 export const superNavItems: AdminNavItem[] = [
   { label: "Dashboard", href: "/admin/super" },
+  { label: "Real time tracking", href: "/admin/super/tracking" },
   { label: "Fleets", href: "/admin/super/fleets" },
   { label: "Drivers", href: "/admin/super/drivers" },
   { label: "Passengers", href: "/admin/super/passengers" },
   { label: "Vehicles", href: "/admin/super/vehicles" },
+  { label: "Rides", href: "/admin/super/rides" },
+  { label: "Payments", href: "/admin/super/payments" },
+  { label: "Coupons", href: "/admin/super/coupons" },
   { label: "Tickets", href: "/admin/super/tickets" },
 ]
 

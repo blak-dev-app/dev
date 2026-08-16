@@ -7,7 +7,7 @@ import { db } from "@/lib/firebase"
 import { AdminShell } from "@/components/admin/admin-shell"
 import { superNavItems } from "@/lib/admin/nav"
 import { Button } from "@blak/ui/components/button"
-import { ArrowLeft, Check } from "lucide-react"
+import { ArrowLeft } from "lucide-react"
 
 function formatDate(ts: any) {
   if (!ts) return "—"
@@ -15,7 +15,7 @@ function formatDate(ts: any) {
   return d.toLocaleDateString("en-US", { day: "2-digit", month: "2-digit", year: "numeric" })
 }
 
-export default function DriverDetailPage() {
+export default function PassengerDetailPage() {
   const params = useParams<{ id: string }>()
   const router = useRouter()
   const [data, setData] = React.useState<any>(null)
@@ -25,7 +25,7 @@ export default function DriverDetailPage() {
   React.useEffect(() => {
     if (!params?.id) return
     const unsub = onSnapshot(
-      doc(db, "driverApplications", params.id),
+      doc(db, "passengers", params.id),
       (snap) => {
         setData(snap.exists() ? snap.data() : null)
         setLoading(false)
@@ -37,7 +37,7 @@ export default function DriverDetailPage() {
 
   React.useEffect(() => {
     if (!params?.id) return
-    const q = query(collection(db, "rides"), where("driverId", "==", params.id), orderBy("createdAt", "desc"))
+    const q = query(collection(db, "rides"), where("passengerId", "==", params.id), orderBy("createdAt", "desc"))
     const unsub = onSnapshot(q, (snap) => setTrips(snap.docs.slice(0, 5).map((d) => ({ id: d.id, data: d.data() }))), () =>
       setTrips([])
     )
@@ -52,26 +52,26 @@ export default function DriverDetailPage() {
     <AdminShell navItems={superNavItems} welcomeName="Admin">
       <Button variant="outline" size="sm" onClick={() => router.back()} className="mb-6">
         <ArrowLeft className="mr-1 size-4" />
-        Driver Details
+        Passenger Details
       </Button>
 
       {loading ? (
         <p className="text-sm text-muted-foreground">Loading…</p>
       ) : !data ? (
-        <p className="text-sm text-muted-foreground">Driver not found.</p>
+        <p className="text-sm text-muted-foreground">Passenger not found.</p>
       ) : (
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
           <div className="rounded-xl border border-border bg-card p-6 xl:col-span-1">
             <div className="mb-4 flex items-center justify-between">
-              <div className="text-base font-semibold">{data.fullName || data.username || "—"}</div>
+              <div className="text-base font-semibold">{data.fullName || data.name || "—"}</div>
               <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
-                {data.status || "Pending Review"}
+                {data.status || "Active"}
               </span>
             </div>
             <dl className="space-y-2 text-sm">
               <div>
                 <dt className="inline font-semibold">Full name: </dt>
-                <dd className="inline text-muted-foreground">{data.fullName || "—"}</dd>
+                <dd className="inline text-muted-foreground">{data.fullName || data.name || "—"}</dd>
               </div>
               <div>
                 <dt className="inline font-semibold">Email ID: </dt>
@@ -82,48 +82,28 @@ export default function DriverDetailPage() {
                 <dd className="inline text-muted-foreground">{data.phone || "—"}</dd>
               </div>
               <div>
-                <dt className="inline font-semibold">Full address: </dt>
-                <dd className="inline text-muted-foreground">{data.address || "—"}</dd>
-              </div>
-              <div>
                 <dt className="inline font-semibold">Passport number or ID: </dt>
                 <dd className="inline text-muted-foreground">{data.passportId || "—"}</dd>
               </div>
-              <div>
-                <dt className="inline font-semibold">Social security number: </dt>
-                <dd className="inline text-muted-foreground">{data.ssn || "—"}</dd>
-              </div>
-              <div>
-                <dt className="inline font-semibold">Insurance number: </dt>
-                <dd className="inline text-muted-foreground">{data.insuranceNumber || "—"}</dd>
-              </div>
-              <div>
-                <dt className="inline font-semibold">Vehicle type: </dt>
-                <dd className="inline text-muted-foreground">{data.vehicleType || "—"}</dd>
-              </div>
-              <div>
-                <dt className="inline font-semibold">Fleet: </dt>
-                <dd className="inline text-muted-foreground">{data.fleetName || "—"}</dd>
-              </div>
             </dl>
-            <div className="mt-6">
-              <h4 className="mb-2 text-sm font-semibold">Document list</h4>
-              <ul className="space-y-1 text-sm text-muted-foreground">
-                {["Passport", "Insurance", "Address proof"].map((doc) => (
-                  <li key={doc} className="flex items-center gap-2">
-                    <Check className="size-4 text-emerald-500" />
-                    {doc}
-                  </li>
-                ))}
-              </ul>
-            </div>
           </div>
 
           <div className="rounded-xl border border-border bg-card p-6">
+            <h3 className="mb-4 text-sm font-semibold">Reviews</h3>
+            <div className="mb-6 grid grid-cols-2 gap-3 text-center">
+              <div className="rounded-lg bg-muted/40 p-3">
+                <div className="text-lg font-semibold">{data.reviewsGiven ?? "—"}</div>
+                <div className="text-xs text-muted-foreground">Reviews given</div>
+              </div>
+              <div className="rounded-lg bg-muted/40 p-3">
+                <div className="text-lg font-semibold">{data.reviewsReceived ?? "—"}</div>
+                <div className="text-xs text-muted-foreground">Review received</div>
+              </div>
+            </div>
             <h3 className="mb-4 text-sm font-semibold">Trip overview</h3>
             <div className="grid grid-cols-3 gap-3 text-center">
               <div className="rounded-lg bg-muted/40 p-3">
-                <div className="text-lg font-semibold">{total}</div>
+                <div className="text-lg font-semibold">{total || data.totalRides || 0}</div>
                 <div className="text-xs text-muted-foreground">Total Trips</div>
               </div>
               <div className="rounded-lg bg-muted/40 p-3">
@@ -141,16 +121,16 @@ export default function DriverDetailPage() {
             <h3 className="mb-4 text-sm font-semibold">Payments</h3>
             <div className="mb-4 grid grid-cols-3 gap-3 text-center">
               <div className="rounded-lg bg-muted/40 p-3">
-                <div className="text-lg font-semibold">{data.totalEarnings ?? "—"}</div>
-                <div className="text-xs text-muted-foreground">Total Earnings</div>
+                <div className="text-lg font-semibold">{data.totalPayment ?? "—"}</div>
+                <div className="text-xs text-muted-foreground">Total Payment</div>
               </div>
               <div className="rounded-lg bg-muted/40 p-3">
-                <div className="text-lg font-semibold">{data.totalPayout ?? "—"}</div>
-                <div className="text-xs text-muted-foreground">Total Payout</div>
+                <div className="text-lg font-semibold">{data.dueAmount ?? "—"}</div>
+                <div className="text-xs text-muted-foreground">Due Amount</div>
               </div>
               <div className="rounded-lg bg-muted/40 p-3">
-                <div className="text-lg font-semibold">{data.totalDeduction ?? "—"}</div>
-                <div className="text-xs text-muted-foreground">Total Deduction</div>
+                <div className="text-lg font-semibold">{data.refunds ?? "—"}</div>
+                <div className="text-xs text-muted-foreground">Refunds</div>
               </div>
             </div>
             <h4 className="mb-2 text-xs font-semibold text-muted-foreground">Last few transactions</h4>

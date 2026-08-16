@@ -2,12 +2,15 @@
 
 import * as React from "react"
 import { collection, onSnapshot, orderBy, query } from "firebase/firestore"
+import Link from "next/link"
 import { db } from "@/lib/firebase"
 import { AdminShell } from "@/components/admin/admin-shell"
 import { PageHeader } from "@/components/admin/page-header"
 import { DataTable, Pagination, type Column } from "@/components/admin/data-table"
 import { superNavItems } from "@/lib/admin/nav"
 import { Button } from "@blak/ui/components/button"
+import { SendEmailModal } from "@/components/admin/send-email-modal"
+import { EditStatusModal } from "@/components/admin/edit-status-modal"
 
 const columns: Column[] = [
   { key: "idx", label: "S. No." },
@@ -16,6 +19,7 @@ const columns: Column[] = [
   { key: "rides", label: "Total Rides" },
   { key: "joined", label: "Registered on" },
   { key: "status", label: "Status" },
+  { key: "actions", label: "Actions" },
 ]
 
 function formatDate(ts: any) {
@@ -25,33 +29,51 @@ function formatDate(ts: any) {
 }
 
 export default function PassengersPage() {
-  const [rows, setRows] = React.useState<Record<string, React.ReactNode>[]>([])
+  const [docs, setDocs] = React.useState<{ id: string; data: any }[]>([])
   const [loading, setLoading] = React.useState(true)
+  const [emailTarget, setEmailTarget] = React.useState<{ id: string; name: string; email?: string } | null>(null)
+  const [statusTarget, setStatusTarget] = React.useState<{ id: string; name: string; status: string } | null>(null)
 
   React.useEffect(() => {
     const q = query(collection(db, "passengers"), orderBy("createdAt", "desc"))
     const unsub = onSnapshot(
       q,
       (snap) => {
-        setRows(
-          snap.docs.map((docSnap, i) => {
-            const d = docSnap.data()
-            return {
-              idx: i + 1,
-              name: d.fullName || d.name || "—",
-              phone: d.phone || "—",
-              rides: d.totalRides ?? 0,
-              joined: formatDate(d.createdAt),
-              status: d.status || "Active",
-            }
-          })
-        )
+        setDocs(snap.docs.map((d) => ({ id: d.id, data: d.data() })))
         setLoading(false)
       },
       () => setLoading(false)
     )
     return () => unsub()
   }, [])
+
+  const rows = docs.map(({ id, data: d }, i) => {
+    const status = d.status || "Active"
+    const name = d.fullName || d.name || "—"
+    return {
+      idx: i + 1,
+      name,
+      phone: d.phone || "—",
+      rides: d.totalRides ?? 0,
+      joined: formatDate(d.createdAt),
+      status,
+      actions: (
+        <div className="flex flex-wrap gap-2">
+          <Link href={`/admin/super/passengers/${id}`}>
+            <Button size="xs" variant="outline">
+              View
+            </Button>
+          </Link>
+          <Button size="xs" variant="outline" onClick={() => setEmailTarget({ id, name, email: d.email })}>
+            Email
+          </Button>
+          <Button size="xs" variant="outline" onClick={() => setStatusTarget({ id, name, status })}>
+            Edit status
+          </Button>
+        </div>
+      ),
+    }
+  })
 
   return (
     <AdminShell navItems={superNavItems} welcomeName="Admin">
@@ -78,6 +100,24 @@ export default function PassengersPage() {
           <Pagination />
         </>
       )}
+
+      <SendEmailModal
+        open={!!emailTarget}
+        onClose={() => setEmailTarget(null)}
+        recipientName={emailTarget?.name || ""}
+        recipientEmail={emailTarget?.email}
+        sourceCollection="passengers"
+        sourceId={emailTarget?.id || ""}
+      />
+      <EditStatusModal
+        open={!!statusTarget}
+        onClose={() => setStatusTarget(null)}
+        title={statusTarget?.name || ""}
+        collectionName="passengers"
+        docId={statusTarget?.id || ""}
+        currentStatus={statusTarget?.status}
+        options={["Active", "Inactive", "Blocked"]}
+      />
     </AdminShell>
   )
 }
