@@ -21,6 +21,14 @@ type AdminShellProps = {
   navItems: AdminNavItem[]
   welcomeName?: string
   children: React.ReactNode
+  /**
+   * Controlled search box value/handler. Pages that want the header search
+   * box to actually filter their own list pass both of these down (see
+   * e.g. app/admin/super/drivers/page.tsx). If omitted, the search box
+   * still works (keeps its own local state) but nothing consumes it yet.
+   */
+  searchValue?: string
+  onSearchChange?: (value: string) => void
 }
 
 function initials(name?: string) {
@@ -186,10 +194,17 @@ function ProfileMenu({ welcomeName }: { welcomeName?: string }) {
   )
 }
 
-export function AdminShell({ navItems, welcomeName, children }: AdminShellProps) {
+export function AdminShell({
+  navItems,
+  welcomeName,
+  children,
+  searchValue,
+  onSearchChange,
+}: AdminShellProps) {
   const pathname = usePathname()
   const router = useRouter()
   const [authChecked, setAuthChecked] = React.useState(false)
+  const [localSearch, setLocalSearch] = React.useState("")
 
   React.useEffect(() => {
     const unsub = onAuthStateChanged(auth, (user) => {
@@ -204,6 +219,16 @@ export function AdminShell({ navItems, welcomeName, children }: AdminShellProps)
     })
     return () => unsub()
   }, [pathname, router])
+
+  // If the page didn't opt into a controlled search box, fall back to local
+  // state (still a real, working input — just not wired to filter anything
+  // on pages that haven't adopted the pattern yet). Reset on navigation.
+  React.useEffect(() => {
+    setLocalSearch("")
+  }, [pathname])
+
+  const effectiveSearchValue = searchValue ?? localSearch
+  const effectiveOnSearchChange = onSearchChange ?? setLocalSearch
 
   if (!authChecked) {
     return null
@@ -263,6 +288,8 @@ export function AdminShell({ navItems, welcomeName, children }: AdminShellProps)
             <Search className="size-4 text-muted-foreground" />
             <input
               placeholder="Search"
+              value={effectiveSearchValue}
+              onChange={(e) => effectiveOnSearchChange(e.target.value)}
               className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
             />
           </div>

@@ -88,19 +88,68 @@ export function DataTable({
   )
 }
 
-export function Pagination() {
+/**
+ * Real, controlled pagination. Pass `page`/`pageCount`/`onPageChange` from the
+ * parent page's own paging state (see e.g. app/admin/super/drivers/page.tsx).
+ * Bare `<Pagination />` (no props) renders nothing rather than fake page numbers,
+ * for pages that haven't been wired up to real paging yet.
+ */
+export function Pagination({
+  page = 1,
+  pageCount = 1,
+  onPageChange,
+}: {
+  page?: number
+  pageCount?: number
+  onPageChange?: (page: number) => void
+}) {
+  if (pageCount <= 1) return null
+
+  const pages: (number | "ellipsis")[] = []
+  for (let p = 1; p <= pageCount; p++) {
+    if (p === 1 || p === pageCount || Math.abs(p - page) <= 1) {
+      pages.push(p)
+    } else if (pages[pages.length - 1] !== "ellipsis") {
+      pages.push("ellipsis")
+    }
+  }
+
   return (
     <div className="mt-4 flex items-center justify-end gap-3 text-xs font-medium text-muted-foreground">
-      <span className="cursor-pointer hover:text-foreground">‹ Previous</span>
-      <span className="inline-flex size-6 items-center justify-center rounded-md bg-primary text-primary-foreground">
-        1
-      </span>
-      <span className="cursor-pointer hover:text-foreground">2</span>
-      <span className="cursor-pointer hover:text-foreground">3</span>
-      <span className="cursor-pointer hover:text-foreground">4</span>
-      <span>. . . . . .</span>
-      <span className="cursor-pointer hover:text-foreground">10</span>
-      <span className="cursor-pointer hover:text-foreground">Next ›</span>
+      <button
+        type="button"
+        disabled={page <= 1}
+        onClick={() => onPageChange?.(page - 1)}
+        className="cursor-pointer hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+      >
+        ‹ Previous
+      </button>
+      {pages.map((p, i) =>
+        p === "ellipsis" ? (
+          <span key={`ellipsis-${i}`}>. . .</span>
+        ) : (
+          <button
+            key={p}
+            type="button"
+            onClick={() => onPageChange?.(p)}
+            className={
+              p === page
+                ? "inline-flex size-6 items-center justify-center rounded-md bg-primary text-primary-foreground"
+                : "cursor-pointer hover:text-foreground"
+            }
+          >
+            {p}
+          </button>
+        )
+      )}
+      <button
+        type="button"
+        disabled={page >= pageCount}
+        onClick={() => onPageChange?.(page + 1)}
+        className="cursor-pointer hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+      >
+        Next ›
+      </button>
     </div>
   )
 }
