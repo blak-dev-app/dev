@@ -39,8 +39,20 @@ export default function DriverPortalPage() {
           setError("We couldn't find an application linked to this account.")
         } else {
           const docSnap = snap.docs[0]!
+          const data = docSnap.data()
+          // Fully approved drivers belong on the real dashboard, not this
+          // onboarding hub — see BLAK_IMPLEMENTATION_STATUS.md Phase 5.
+          // DriverShell re-checks this same status server-side-of-trust
+          // (reads Firestore directly) on every /driver/dashboard/* page
+          // load, so this redirect is purely a convenience for drivers who
+          // land here directly (e.g. an old bookmark) — it isn't the
+          // security boundary.
+          if (data?.status === "Active") {
+            router.replace("/driver/dashboard")
+            return
+          }
           setApplicationId(docSnap.id)
-          setApplication(docSnap.data())
+          setApplication(data)
         }
       } catch (err) {
         console.error(err)
@@ -70,10 +82,6 @@ export default function DriverPortalPage() {
       ) : application?.status === "Documents Submitted" ? (
         <p className="mt-4 text-sm text-muted-foreground">
           Your documents are under final review. We'll email you once a decision has been made.
-        </p>
-      ) : application?.status === "Active" ? (
-        <p className="mt-4 text-sm text-muted-foreground">
-          You're fully approved to drive with BLAK. Welcome aboard!
         </p>
       ) : application?.status === "Rejected" ? (
         <p className="mt-4 text-sm text-muted-foreground">
