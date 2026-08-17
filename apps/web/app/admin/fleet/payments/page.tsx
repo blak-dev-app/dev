@@ -1,13 +1,14 @@
 "use client"
 
 import * as React from "react"
-import { collection, onSnapshot, orderBy, query } from "firebase/firestore"
+import { collection, onSnapshot, query, where } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { AdminShell } from "@/components/admin/admin-shell"
 import { PageHeader } from "@/components/admin/page-header"
 import { DataTable, Pagination, type Column } from "@/components/admin/data-table"
 import { StatusFilter } from "@/components/admin/status-filter"
 import { fleetNavItems } from "@/lib/admin/nav"
+import { useAdminClaims } from "@/lib/auth-claims"
 
 const columns: Column[] = [
   { key: "idx", label: "S. No." },
@@ -28,25 +29,41 @@ function formatDate(ts: any) {
   return d.toLocaleDateString("en-US", { day: "2-digit", month: "2-digit", year: "numeric" })
 }
 
+function toMillis(ts: any) {
+  return ts?.toMillis ? ts.toMillis() : ts ? new Date(ts).getTime() : 0
+}
+
 export default function FleetPaymentsPage() {
+  const { fleetId, loading: claimsLoading } = useAdminClaims()
   const [docs, setDocs] = React.useState<{ id: string; data: any }[]>([])
   const [loading, setLoading] = React.useState(true)
   const [searchTerm, setSearchTerm] = React.useState("")
   const [statusFilter, setStatusFilter] = React.useState<string | null>(null)
   const [page, setPage] = React.useState(1)
 
+  // Scoped to this fleet's own fleetId — see BLAK_IMPLEMENTATION_STATUS.md
+  // Phase 4/10. Sorted client-side rather than via a server orderBy so this
+  // stays a single equality filter (no new composite index needed).
+  // Transactions created before the Phase 2 fleetId rollout have no
+  // fleetId and won't appear here — see Transaction.fleetId in lib/types.ts.
   React.useEffect(() => {
-    const q = query(collection(db, "transactions"), orderBy("createdAt", "desc"))
+    if (!fleetId) {
+      setLoading(false)
+      return
+    }
+    const q = query(collection(db, "transactions"), where("fleetId", "==", fleetId))
     const unsub = onSnapshot(
       q,
       (snap) => {
-        setDocs(snap.docs.map((docSnap) => ({ id: docSnap.id, data: docSnap.data() })))
+        const next = snap.docs.map((docSnap) => ({ id: docSnap.id, data: docSnap.data() }))
+        next.sort((a, b) => toMillis(b.data.createdAt) - toMillis(a.data.createdAt))
+        setDocs(next)
         setLoading(false)
       },
       () => setLoading(false)
     )
     return () => unsub()
-  }, [])
+  }, [fleetId])
 
   React.useEffect(() => {
     setPage(1)
@@ -87,10 +104,15 @@ export default function FleetPaymentsPage() {
       <p className="mb-4 text-xs font-semibold text-muted-foreground">
         Live from Firestore — payments processed for your fleet appear here automatically.
       </p>
-      {loading ? (
+      {claimsLoading || loading ? (
         <p className="text-sm text-muted-foreground">Loading…</p>
+      ) : !fleetId ? (
+        <p className="text-sm text-muted-foreground">
+          This account isn&apos;t linked to a fleet yet. Contact BLAK Super Admin to have your fleet
+          profile connected to this login.
+        </p>
       ) : docs.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No payments yet.</p>
+        <p className="text-sm text-muted-foreground">No payments for this fleet yet.</p>
       ) : filteredDocs.length === 0 ? (
         <p className="text-sm text-muted-foreground">
           No payments match your {isFiltered ? "search/filter" : "search"}.

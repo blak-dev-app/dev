@@ -6,7 +6,22 @@ import { db } from "@/lib/firebase"
 import { Button } from "@blak/ui/components/button"
 import { X } from "lucide-react"
 
-export function AddQueryModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function AddQueryModal({
+  open,
+  onClose,
+  fleetId,
+}: {
+  open: boolean
+  onClose: () => void
+  /**
+   * The signed-in Fleet Admin's own fleetId (from useAdminClaims()),
+   * passed down by the page so this modal never has to resolve it itself.
+   * Persisted on the new ticket so it's visible under the new fleetId-
+   * scoped firestore.rules read rule — see BLAK_IMPLEMENTATION_STATUS.md
+   * Phase 2/4. Submit is disabled by the caller when this is null.
+   */
+  fleetId?: string | null
+}) {
   const [subject, setSubject] = React.useState("")
   const [message, setMessage] = React.useState("")
   const [saving, setSaving] = React.useState(false)
@@ -15,7 +30,7 @@ export function AddQueryModal({ open, onClose }: { open: boolean; onClose: () =>
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!subject.trim()) return
+    if (!subject.trim() || !fleetId) return
     setSaving(true)
     try {
       // Writes to the unified `tickets` collection (shared with Super Admin's
@@ -24,6 +39,7 @@ export function AddQueryModal({ open, onClose }: { open: boolean; onClose: () =>
       await addDoc(collection(db, "tickets"), {
         audience: "fleet_admin",
         type: "admin",
+        fleetId,
         subject,
         message,
         status: "New",
@@ -68,7 +84,7 @@ export function AddQueryModal({ open, onClose }: { open: boolean; onClose: () =>
           <Button type="button" variant="outline" size="sm" onClick={onClose}>
             Cancel
           </Button>
-          <Button type="submit" size="sm" disabled={saving}>
+          <Button type="submit" size="sm" disabled={saving || !fleetId}>
             {saving ? "Submitting…" : "Submit"}
           </Button>
         </div>

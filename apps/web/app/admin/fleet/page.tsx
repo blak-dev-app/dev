@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { collection, onSnapshot, orderBy, query, where } from "firebase/firestore"
+import { collection, onSnapshot, query, where } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { AdminShell } from "@/components/admin/admin-shell"
 import { fleetNavItems } from "@/lib/admin/nav"
@@ -10,13 +10,17 @@ import { useAdminClaims } from "@/lib/auth-claims"
 type Doc = Record<string, any>
 
 function formatDate(ts: any) {
-  if (!ts) return "â"
+  if (!ts) return "—"
   const d = ts.toDate ? ts.toDate() : new Date(ts)
   return d.toLocaleDateString("en-US", {
     day: "2-digit",
     month: "short",
     year: "numeric",
   })
+}
+
+function toMillis(ts: any) {
+  return ts?.toMillis ? ts.toMillis() : ts ? new Date(ts).getTime() : 0
 }
 
 function KpiCard({
@@ -68,12 +72,15 @@ export default function FleetAdminDashboard() {
   const [dataLoading, setDataLoading] = React.useState(true)
 
   // Every query below is scoped to this fleet's own fleetId, resolved from
-  // the signed-in user's Firebase Auth custom claim â never from a URL or
+  // the signed-in user's Firebase Auth custom claim — never from a URL or
   // form value a fleet admin could tamper with (spec section 31). See
-  // BLAK_IMPLEMENTATION_STATUS.md Phase 2/4. The "Recent Queries" widget
-  // that was here previously read the legacy `queries` collection, which
-  // the rest of the app stopped writing to once tickets were unified
-  // (PRODUCTION_READY_TRACKER.md Phase 2) â that was already a bug before
+  // BLAK_IMPLEMENTATION_STATUS.md Phase 2/4. Transactions are sorted
+  // client-side rather than via a server orderBy so that query stays a
+  // single equality filter and doesn't need a new Firestore composite
+  // index on (fleetId, createdAt). The "Recent Queries" widget that was
+  // here previously read the legacy `queries` collection, which the rest
+  // of the app stopped writing to once tickets were unified
+  // (PRODUCTION_READY_TRACKER.md Phase 2) — that was already a bug before
   // this change (it always showed "No queries yet"), not something
   // introduced here; left as-is pending a dedicated fix so this pass stays
   // scoped to fleet-isolation.
@@ -94,10 +101,11 @@ export default function FleetAdminDashboard() {
       onSnapshot(query(collection(db, "rides"), where("fleetId", "==", fleetId)), (snap) =>
         setRides(snap.docs.map((d) => d.data()))
       ),
-      onSnapshot(
-        query(collection(db, "transactions"), where("fleetId", "==", fleetId), orderBy("createdAt", "desc")),
-        (snap) => setTransactions(snap.docs.map((d) => d.data()))
-      ),
+      onSnapshot(query(collection(db, "transactions"), where("fleetId", "==", fleetId)), (snap) => {
+        const next = snap.docs.map((d) => d.data())
+        next.sort((a, b) => toMillis(b.createdAt) - toMillis(a.createdAt))
+        setTransactions(next)
+      }),
     ]
     return () => unsubs.forEach((u) => u())
   }, [fleetId])
@@ -120,20 +128,20 @@ export default function FleetAdminDashboard() {
   return (
     <AdminShell navItems={fleetNavItems} welcomeName="Fleet Admin">
       {claimsLoading || dataLoading ? (
-        <p className="text-sm text-muted-foreground">Loading your fleet's dataâ¦</p>
+        <p className="text-sm text-muted-foreground">Loading your fleet&apos;s data…</p>
       ) : !fleetId ? (
         <div className="rounded-xl border border-border bg-card p-6 text-sm text-muted-foreground">
-          This account isn't linked to a fleet yet. Contact BLAK Super Admin to have your fleet
+          This account isn&apos;t linked to a fleet yet. Contact BLAK Super Admin to have your fleet
           profile connected to this login.
         </div>
       ) : (
         <>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <KpiCard icon="ð" label={<>Total<br />Drivers</>} value={totalDrivers} />
-            <KpiCard icon="ð" label={<>Total<br />Vehicles</>} value={totalVehicles} />
-            <KpiCard icon="ð" label={<>Total<br />Rides</>} value={totalRides} />
+            <KpiCard icon="🚗" label={<>Total<br />Drivers</>} value={totalDrivers} />
+            <KpiCard icon="🚙" label={<>Total<br />Vehicles</>} value={totalVehicles} />
+            <KpiCard icon="📍" label={<>Total<br />Rides</>} value={totalRides} />
             <KpiCard
-              icon="ð"
+              icon="📈"
               label={<>Fleet<br />Revenue (USD)</>}
               value={totalRevenue.toLocaleString()}
               accent

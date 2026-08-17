@@ -1,13 +1,14 @@
 "use client"
 
 import * as React from "react"
-import { collection, onSnapshot, orderBy, query } from "firebase/firestore"
+import { collection, onSnapshot, query, where } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { AdminShell } from "@/components/admin/admin-shell"
 import { PageHeader } from "@/components/admin/page-header"
 import { DataTable, Pagination, type Column } from "@/components/admin/data-table"
 import { StatusFilter } from "@/components/admin/status-filter"
 import { fleetNavItems } from "@/lib/admin/nav"
+import { useAdminClaims } from "@/lib/auth-claims"
 import { Button } from "@blak/ui/components/button"
 import { AssignDriverModal } from "@/components/admin/assign-driver-modal"
 
@@ -29,7 +30,12 @@ function formatDate(ts: any) {
   return d.toLocaleDateString("en-US", { day: "2-digit", month: "2-digit", year: "numeric" })
 }
 
+function toMillis(ts: any) {
+  return ts?.toMillis ? ts.toMillis() : ts ? new Date(ts).getTime() : 0
+}
+
 export default function FleetVehiclesPage() {
+  const { fleetId, loading: claimsLoading } = useAdminClaims()
   const [docs, setDocs] = React.useState<{ id: string; data: any }[]>([])
   const [loading, setLoading] = React.useState(true)
   const [assignTarget, setAssignTarget] = React.useState<{ id: string; label: string } | null>(null)
@@ -37,18 +43,30 @@ export default function FleetVehiclesPage() {
   const [statusFilter, setStatusFilter] = React.useState<string | null>(null)
   const [page, setPage] = React.useState(1)
 
+  // Scoped to this fleet's own fleetId — see BLAK_IMPLEMENTATION_STATUS.md
+  // Phase 4. Sorting is done client-side (not via a server-side orderBy)
+  // specifically so this query stays a single equality filter and doesn't
+  // require a new Firestore composite index on (fleetId, createdAt); same
+  // reasoning already used for the audience/type filtering on the Queries
+  // page.
   React.useEffect(() => {
-    const q = query(collection(db, "vehicles"), orderBy("createdAt", "desc"))
+    if (!fleetId) {
+      setLoading(false)
+      return
+    }
+    const q = query(collection(db, "vehicles"), where("fleetId", "==", fleetId))
     const unsub = onSnapshot(
       q,
       (snap) => {
-        setDocs(snap.docs.map((d) => ({ id: d.id, data: d.data() })))
+        const next = snap.docs.map((d) => ({ id: d.id, data: d.data() }))
+        next.sort((a, b) => toMillis(b.data.createdAt) - toMillis(a.data.createdAt))
+        setDocs(next)
         setLoading(false)
       },
       () => setLoading(false)
     )
     return () => unsub()
-  }, [])
+  }, [fleetId])
 
   React.useEffect(() => {
     setPage(1)
@@ -99,10 +117,15 @@ export default function FleetVehiclesPage() {
       <p className="mb-4 text-xs font-semibold text-muted-foreground">
         Live from Firestore — vehicles added to your fleet appear here automatically.
       </p>
-      {loading ? (
+      {claimsLoading || loading ? (
         <p className="text-sm text-muted-foreground">Loading…</p>
+      ) : !fleetId ? (
+        <p className="text-sm text-muted-foreground">
+          This account isn&apos;t linked to a fleet yet. Contact BLAK Super Admin to have your fleet
+          profile connected to this login.
+        </p>
       ) : docs.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No vehicles yet.</p>
+        <p className="text-sm text-muted-foreground">No vehicles have been added to this fleet yet.</p>
       ) : filteredDocs.length === 0 ? (
         <p className="text-sm text-muted-foreground">
           No vehicles match your {isFiltered ? "search/filter" : "search"}.
