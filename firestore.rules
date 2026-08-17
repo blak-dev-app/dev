@@ -2,49 +2,109 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function role() { return request.auth.token.role; }
+    function isSuperAdmin() { return signedIn() && role() == "super_admin"; }
+    function isFleetAdmin() { return signedIn() && role() == "fleet_admin"; }
+    function isDriver() { return signedIn() && role() == "driver"; }
+    function myFleetId() { return request.auth.token.fleetId; }
+    function myDriverId() { return request.auth.token.driverId; }
+
+    // Bootstrap safety net: while an already-signed-in session has no role
+    // claim yet (before the one-time self-heal backfill has run for it),
+    // fall back to the pre-existing "any signed-in user" behavior instead
+    // of locking everyone out the moment these rules deploy. Once every
+    // account has a real claim this is permanently a no-op. See
+    // BLAK_IMPLEMENTATION_STATUS.md Phase 2 and /api/admin/backfill-claims.
+    function noRoleYet() { return signedIn() && role() == null; }
+
     match /driverApplications/{docId} {
       allow create: if true;
-      allow read: if request.auth != null;
-      allow update: if request.auth != null && request.resource.data.status != "Active";
+      allow read: if isSuperAdmin()
+        || (isFleetAdmin() && resource.data.fleetId == myFleetId())
+        || (isDriver() && resource.data.authUid == request.auth.uid)
+        || noRoleYet();
+      allow update: if (isSuperAdmin()
+          || (isDriver() && resource.data.authUid == request.auth.uid)
+          || noRoleYet())
+        && request.resource.data.status != "Active";
     }
+
     match /fleetApplications/{docId} {
       allow create: if true;
-      allow read: if request.auth != null;
-      allow update: if request.auth != null && request.resource.data.status != "Active";
+      allow read: if isSuperAdmin()
+        || (isFleetAdmin() && docId == myFleetId())
+        || noRoleYet();
+      allow update: if (isSuperAdmin() || noRoleYet())
+        && request.resource.data.status != "Active";
     }
+
     match /driverTickets/{docId} {
-      allow create: if request.auth != null;
-      allow read: if request.auth != null;
+      allow create: if signedIn();
+      allow read: if signedIn();
     }
     match /queries/{docId} {
-      allow create: if request.auth != null;
-      allow read: if request.auth != null;
+      allow create: if signedIn();
+      allow read: if signedIn();
     }
+
     match /tickets/{docId} {
-      allow create: if request.auth != null;
-      allow read: if request.auth != null;
-      allow update: if request.auth != null;
+      allow create: if signedIn();
+      allow read: if isSuperAdmin()
+        || (isFleetAdmin() && resource.data.fleetId == myFleetId())
+        || (isDriver() && resource.data.driverId == myDriverId())
+        || noRoleYet();
+      allow update: if isSuperAdmin()
+        || (isFleetAdmin() && resource.data.fleetId == myFleetId())
+        || (isDriver() && resource.data.driverId == myDriverId())
+        || noRoleYet();
       match /messages/{msgId} {
-        allow create: if request.auth != null;
-        allow read: if request.auth != null;
+        allow create: if signedIn();
+        allow read: if signedIn();
       }
     }
+
     match /passengers/{docId} {
-      allow create: if request.auth != null;
-      allow read: if request.auth != null;
+      allow create: if signedIn();
+      allow read: if signedIn();
+      allow update: if isSuperAdmin() || noRoleYet();
     }
+
     match /transactions/{docId} {
-      allow create: if request.auth != null;
-      allow read: if request.auth != null;
+      allow create: if signedIn();
+      allow read: if isSuperAdmin()
+        || (isFleetAdmin() && resource.data.fleetId == myFleetId())
+        || (isDriver() && resource.data.driverId == myDriverId())
+        || noRoleYet();
+      allow update: if isSuperAdmin() || noRoleYet();
     }
+
     match /rides/{docId} {
-      allow create: if request.auth != null;
-      allow read: if request.auth != null;
+      allow create: if signedIn();
+      allow read: if isSuperAdmin()
+        || (isFleetAdmin() && resource.data.fleetId == myFleetId())
+        || (isDriver() && resource.data.driverId == myDriverId())
+        || noRoleYet();
+      allow update: if isSuperAdmin() || noRoleYet();
     }
+
     match /vehicles/{docId} {
-      allow create: if request.auth != null;
-      allow read: if request.auth != null;
-      allow update: if request.auth != null;
+      allow create: if signedIn();
+      allow read: if isSuperAdmin()
+        || (isFleetAdmin() && resource.data.fleetId == myFleetId())
+        || (isDriver() && resource.data.driverId == myDriverId())
+        || noRoleYet();
+      allow update: if isSuperAdmin()
+        || (isFleetAdmin() && resource.data.fleetId == myFleetId())
+        || noRoleYet();
+    }
+
+    match /coupons/{docId} {
+      allow read: if signedIn();
+      allow create: if isSuperAdmin() || noRoleYet();
+      allow update: if isSuperAdmin() || noRoleYet();
+      allow delete: if isSuperAdmin() || noRoleYet();
     }
   }
 }
