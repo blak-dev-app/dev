@@ -56,7 +56,7 @@ export default function FleetProfilePage() {
         setLoading(false)
       },
       () => setLoading(false)
-   ")
+    )
     return () => unsub()
   }, [fleetId])
 
