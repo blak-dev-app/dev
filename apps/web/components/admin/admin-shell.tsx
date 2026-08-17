@@ -80,9 +80,9 @@ function NotificationBell() {
 
   React.useEffect(() => {
     const sources: { col: string; label: (d: any) => string; kind: string }[] = [
-      { col: "fleetApplications", label: (d) => `New fleet application — ${d.companyName || d.name || "Unnamed"}`, kind: "Fleet" },
-      { col: "driverApplications", label: (d) => `New driver application — ${d.name || "Unnamed"}`, kind: "Driver" },
-      { col: "queries", label: (d) => `New query — ${d.subject || d.message || "Untitled"}`, kind: "Query" },
+      { col: "fleetApplications", label: (d) => `New fleet application â ${d.companyName || d.name || "Unnamed"}`, kind: "Fleet" },
+      { col: "driverApplications", label: (d) => `New driver application â ${d.name || "Unnamed"}`, kind: "Driver" },
+      { col: "queries", label: (d) => `New query â ${d.subject || d.message || "Untitled"}`, kind: "Query" },
     ]
     const unsubs = sources.map(({ col, label, kind }) =>
       onSnapshot(query(collection(db, col), orderBy("createdAt", "desc"), limit(5)), (snap) => {
@@ -194,6 +194,29 @@ function ProfileMenu({ welcomeName }: { welcomeName?: string }) {
   )
 }
 
+/**
+ * Which role is allowed to view a given /admin/* path. Added 2026-08-17 â
+ * see BLAK_IMPLEMENTATION_STATUS.md Phase 2. Previously AdminShell only
+ * checked "is anyone signed in", which meant a driver's or a fleet
+ * admin's account could load the Super Admin dashboard and vice versa â
+ * there was no role concept anywhere in the app. This function is the
+ * single place that decides which role a path requires; individual pages
+ * don't need to opt in.
+ */
+function requiredRoleFor(pathname: string | null): string | null {
+  if (!pathname) return null
+  if (pathname.startsWith("/admin/super")) return "super_admin"
+  if (pathname.startsWith("/admin/fleet")) return "fleet_admin"
+  return null
+}
+
+function homeForRole(role: string | null | undefined): string {
+  if (role === "super_admin") return "/admin/super"
+  if (role === "fleet_admin") return "/admin/fleet"
+  if (role === "driver") return "/driver"
+  return "/"
+}
+
 export function AdminShell({
   navItems,
   welcomeName,
@@ -207,21 +230,61 @@ export function AdminShell({
   const [localSearch, setLocalSearch] = React.useState("")
 
   React.useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        setAuthChecked(true)
-      } else {
-        const loginHref = pathname?.startsWith("/admin/fleet")
-          ? "/admin/fleet/login"
-          : "/admin/super/login"
+    const unsub = onAuthStateChanged(auth, async (user) => {
+      const loginHref = pathname?.startsWith("/admin/fleet") ? "/admin/fleet/login" : "/admin/super/login"
+
+      if (!user) {
         router.replace(loginHref)
+        return
       }
+
+      const required = requiredRoleFor(pathname)
+      if (!required) {
+        // Not a role-scoped path (shouldn't happen for anything AdminShell
+        // wraps today, but fail open to "signed in" rather than block).
+        setAuthChecked(true)
+        return
+      }
+
+      let tokenResult = await user.getIdTokenResult()
+      let role = tokenResult.claims.role as string | undefined
+
+      if (!role) {
+        // Bootstrap self-heal: this session predates role claims existing,
+        // or the account was created outside the invite flow. Ask the
+        // server to (re)compute every account's claims from Firestore,
+        // then force-refresh this one token. Idempotent â safe even if
+        // several tabs trigger it at once.
+        try {
+          await fetch("/api/admin/backfill-claims", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${tokenResult.token}` },
+          })
+          tokenResult = await user.getIdTokenResult(true)
+          role = tokenResult.claims.role as string | undefined
+        } catch {
+          // fall through â worst case, role stays undefined and we send
+          // them back to login below rather than guess.
+        }
+      }
+
+      if (!role) {
+        router.replace(loginHref)
+        return
+      }
+
+      if (role !== required) {
+        router.replace(homeForRole(role))
+        return
+      }
+
+      setAuthChecked(true)
     })
     return () => unsub()
   }, [pathname, router])
 
   // If the page didn't opt into a controlled search box, fall back to local
-  // state (still a real, working input — just not wired to filter anything
+  // state (still a real, working input â just not wired to filter anything
   // on pages that haven't adopted the pattern yet). Reset on navigation.
   React.useEffect(() => {
     setLocalSearch("")
