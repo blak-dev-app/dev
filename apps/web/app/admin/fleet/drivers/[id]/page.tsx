@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { useParams, useRouter } from "next/navigation"
-import { collection, doc, onSnapshot, orderBy, query, where } from "firebase/firestore"
+import { collection, doc, onSnapshot, query, where } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { AdminShell } from "@/components/admin/admin-shell"
 import { fleetNavItems } from "@/lib/admin/nav"
@@ -15,12 +15,16 @@ function formatDate(ts: any) {
   return d.toLocaleDateString("en-US", { day: "2-digit", month: "2-digit", year: "numeric" })
 }
 
+function toMillis(ts: any) {
+  return ts?.toMillis ? ts.toMillis() : ts ? new Date(ts).getTime() : 0
+}
+
 export default function FleetDriverDetailPage() {
   const params = useParams<{ id: string }>()
   const router = useRouter()
   const [data, setData] = React.useState<any>(null)
   const [loading, setLoading] = React.useState(true)
-  const [trips, setTrips] = React.useState<{ id: string; data: any }[]>([])
+  const [allTrips, setAllTrips] = React.useState<{ id: string; data: any }[]>([])
 
   React.useEffect(() => {
     if (!params?.id) return
@@ -35,18 +39,34 @@ export default function FleetDriverDetailPage() {
     return () => unsub()
   }, [params?.id])
 
+  // Full ride set for this driver (no orderBy alongside the where(), so no
+  // new composite index is needed — same client-sort pattern used
+  // everywhere else in Phase 4). Trip-overview counts below are computed
+  // from this FULL set: the previous version fetched only the 5 most
+  // recent rides and used that same capped array for "Total Trips", which
+  // under-reported the true total for any driver with more than 5 rides.
+  // Fixed alongside the new Driver Performance page in the same PR — see
+  // BLAK_IMPLEMENTATION_STATUS.md Phase 4/11.
   React.useEffect(() => {
     if (!params?.id) return
-    const q = query(collection(db, "rides"), where("driverId", "==", params.id), orderBy("createdAt", "desc"))
-    const unsub = onSnapshot(q, (snap) => setTrips(snap.docs.slice(0, 5).map((d) => ({ id: d.id, data: d.data() }))), () =>
-      setTrips([])
+    const q = query(collection(db, "rides"), where("driverId", "==", params.id))
+    const unsub = onSnapshot(
+      q,
+      (snap) => {
+        const next = snap.docs.map((d) => ({ id: d.id, data: d.data() }))
+        next.sort((a, b) => toMillis(b.data.createdAt) - toMillis(a.data.createdAt))
+        setAllTrips(next)
+      },
+      () => setAllTrips([])
     )
     return () => unsub()
   }, [params?.id])
 
-  const total = trips.length
-  const completed = trips.filter((t) => t.data.status === "Completed").length
-  const cancelled = trips.filter((t) => t.data.status === "Cancelled").length
+  const total = allTrips.length
+  const completed = allTrips.filter((t) => t.data.status === "Completed").length
+  const cancelled = allTrips.filter((t) => t.data.status === "Cancelled").length
+  const completionRate = total ? Math.round((completed / total) * 100) : null
+  const recentTrips = allTrips.slice(0, 5)
 
   return (
     <AdminShell navItems={fleetNavItems} welcomeName="Fleet Admin">
@@ -131,7 +151,7 @@ export default function FleetDriverDetailPage() {
               <div className="text-xs text-muted-foreground">{data.reviewCount ?? 0} Reviews</div>
             </div>
             <h3 className="mb-4 text-sm font-semibold">Trip overview</h3>
-            <div className="grid grid-cols-3 gap-3 text-center">
+            <div className="grid grid-cols-2 gap-3 text-center">
               <div className="rounded-lg bg-muted/40 p-3">
                 <div className="text-lg font-semibold">{total}</div>
                 <div className="text-xs text-muted-foreground">Total Trips</div>
@@ -143,6 +163,10 @@ export default function FleetDriverDetailPage() {
               <div className="rounded-lg bg-muted/40 p-3">
                 <div className="text-lg font-semibold">{cancelled}</div>
                 <div className="text-xs text-muted-foreground">Cancelled</div>
+              </div>
+              <div className="rounded-lg bg-muted/40 p-3">
+                <div className="text-lg font-semibold">{completionRate === null ? "—" : `${completionRate}%`}</div>
+                <div className="text-xs text-muted-foreground">Completion Rate</div>
               </div>
             </div>
           </div>
@@ -164,13 +188,15 @@ export default function FleetDriverDetailPage() {
               </div>
             </div>
             <h4 className="mb-2 text-xs font-semibold text-muted-foreground">Last few transactions</h4>
-            {trips.length === 0 ? (
+            {recentTrips.length === 0 ? (
               <p className="text-xs text-muted-foreground">No trips yet.</p>
             ) : (
               <ul className="space-y-2 text-xs">
-                {trips.map(({ id, data: t }) => (
+                {recentTrips.map(({ id, data: t }) => (
                   <li key={id} className="flex items-center justify-between border-t border-border pt-2">
-                    <span>{t.from || "—"} to {t.to || "—"}</span>
+                    <span>
+                      {t.from || "—"} to {t.to || "—"}
+                    </span>
                     <span className="text-muted-foreground">{formatDate(t.createdAt)}</span>
                     <span className="font-semibold">{t.amountPaid ?? "—"}</span>
                   </li>
