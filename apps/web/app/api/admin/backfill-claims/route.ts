@@ -1,127 +1,286 @@
 import { NextResponse } from "next/server"
 import { adminAuth, adminDb } from "@/lib/firebase-admin"
-import { requireAdmin } from "@/lib/require-admin"
+import { requireAdmin, requireRole } from "@/lib/require-admin"
 import { resolveFleetIdByName } from "@/lib/fleet-resolve"
 
+type AdminAuth = ReturnType<typeof adminAuth>
+type AdminDb = ReturnType<typeof adminDb>
+
 /**
- * One-time-per-account, idempotent sync of Firebase Auth custom claims
- * (role/fleetId/driverId) from the current state of Firestore, for every
- * account that predates the role-claims system — see
- * BLAK_IMPLEMENTATION_STATUS.md Phase 2. Safe to call repeatedly: it only
- * (re)writes claims computed fresh from Firestore each time, and never
- * accepts caller-supplied claim values.
+ * Idempotent sync of Firebase Auth custom claims (role/fleetId/driverId) from
+ * the current state of Firestore — see BLAK_IMPLEMENTATION_STATUS.md Phase 2.
+ * Claims are always computed fresh from Firestore documents; a caller can
+ * never pass in claim values for themselves or anyone else.
  *
  * Called automatically, once per signed-in session, by
- * components/admin/admin-shell.tsx and the Driver dashboard shell whenever
- * a user's current ID token has no `role` claim yet.
+ * components/admin/admin-shell.tsx and components/driver/driver-shell.tsx
+ * whenever a user's current ID token has no `role` claim yet.
  *
- * Also backfills Driver.fleetId / Vehicle.fleetId on the Firestore
- * documents themselves (not just the Auth claim) by resolving the existing
- * denormalized fleetName string — see PRODUCTION_READY_TRACKER.md task
- * #158. Historical rides/transactions are deliberately NOT backfilled: there
- * is no reliable record of which fleet a driver belonged to at the time of
- * an old ride, and guessing would create fabricated-looking historical
- * data (spec sections 18-19, 42-43). New rides/transactions get a real
- * fleetId going forward instead, once that write path exists.
+ * ---------------------------------------------------------------------------
+ * SECURITY (rewritten 2026-08-17 — see BLAK_IMPLEMENTATION_STATUS.md Phase 17)
+ * ---------------------------------------------------------------------------
+ * The previous version of this route ended with a fallback that promoted ANY
+ * Auth account with no role claim and no application document to
+ * `super_admin`. Its comment justified this as "today that only describes
+ * manually-created Super Admin accounts" — true when written, but an
+ * assumption about who can create accounts rather than an enforced check.
+ * Since Email/Password and Google sign-in are both enabled on the project and
+ * Firebase web API keys are public by design, anyone could self-register and
+ * then call this endpoint (gated by requireAdmin, i.e. *any* signed-in user,
+ * deliberately, because it bootstraps the first claims) to make themselves
+ * super_admin. That was a complete privilege-escalation chain requiring no
+ * existing credential.
  *
- * Auth: gated by requireAdmin (any signed-in Firebase user), not
- * requireRole — deliberately, since this is the bootstrap tool that grants
- * the very first role claims and can't yet require one to run. It only
- * ever *writes* claims computed from existing Firestore data; a caller
- * cannot pass in arbitrary claims for themselves or anyone else.
+ * Four changes close it:
+ *
+ *  1. The blanket super_admin fallback is gone. Nothing mints super_admin
+ *     implicitly any more.
+ *
+ *  2. Bootstrap is now allowlisted AND self-disabling. An account can only be
+ *     promoted if its VERIFIED token email (decoded.email — from the signed
+ *     token, never the request body) is listed in BOOTSTRAP_SUPER_ADMIN_EMAILS
+ *     *and* no super_admin exists in the project yet. The second condition
+ *     means the path can be used exactly once and is permanently closed
+ *     afterwards, allowlist or not.
+ *
+ *  3. The default behaviour syncs ONLY the calling user's own claims. That is
+ *     all AdminShell/DriverShell ever needed — they call this to self-heal the
+ *     current session. Previously every call rewrote claims for every account
+ *     in the project and read every doc in three collections, which any
+ *     signed-in user could trigger at will.
+ *
+ *  4. The project-wide sweep still exists for genuine backfills, but now lives
+ *     behind `?all=true` and requires an existing super_admin.
+ *
+ * The fleet_admin and driver paths are unchanged in substance: they derive
+ * claims from documents that an admin created, and they still backfill
+ * Driver.fleetId / Vehicle.fleetId from the denormalized fleetName string
+ * (PRODUCTION_READY_TRACKER task #158). Historical rides/transactions are
+ * still deliberately NOT backfilled — there is no reliable record of which
+ * fleet a driver belonged to at the time of an old ride, and guessing would
+ * fabricate history (spec sections 18-19, 42-43).
  */
+
+/** True if any account in the project already holds the super_admin role. */
+async function superAdminExists(auth: AdminAuth): Promise<boolean> {
+  let pageToken: string | undefined
+  do {
+    const page = await auth.listUsers(1000, pageToken)
+    for (const user of page.users) {
+      const claims = user.customClaims as Record<string, unknown> | undefined
+      if (claims?.role === "super_admin") return true
+    }
+    pageToken = page.pageToken
+  } while (pageToken)
+  return false
+}
+
+/**
+ * Backfill Vehicle.fleetId for every vehicle owned by this driver that has a
+ * driverId but no fleetId of its own. Returns how many were updated.
+ */
+async function backfillVehiclesForDriver(db: AdminDb, driverId: string, fleetId: string) {
+  const snap = await db.collection("vehicles").where("driverId", "==", driverId).get()
+  let updated = 0
+  for (const doc of snap.docs) {
+    if (doc.data().fleetId) continue
+    await doc.ref.update({ fleetId })
+    updated++
+  }
+  return updated
+}
+
+type SyncResult = {
+  role: "super_admin" | "fleet_admin" | "driver" | null
+  reason: string
+  driverFleetIdBackfilled: number
+  vehicleFleetIdBackfilled: number
+}
+
+/**
+ * Recompute and write the claims for a single account, from Firestore only.
+ * Returns what was applied so the caller can report it without guessing.
+ */
+async function syncClaimsForUser(
+  auth: AdminAuth,
+  db: AdminDb,
+  uid: string,
+  email: string | undefined,
+  emailVerified: boolean
+): Promise<SyncResult> {
+  const result: SyncResult = {
+    role: null,
+    reason: "no linked application document",
+    driverFleetIdBackfilled: 0,
+    vehicleFleetIdBackfilled: 0,
+  }
+
+  // 1. Fleet admin — the account is the authUid on a fleetApplications doc.
+  const fleetSnap = await db.collection("fleetApplications").where("authUid", "==", uid).limit(1).get()
+  const fleetDoc = fleetSnap.docs[0]
+  if (fleetDoc) {
+    await auth.setCustomUserClaims(uid, { role: "fleet_admin", fleetId: fleetDoc.id })
+    result.role = "fleet_admin"
+    result.reason = `linked to fleetApplications/${fleetDoc.id}`
+    return result
+  }
+
+  // 2. Driver — the account is the authUid on a driverApplications doc.
+  const driverSnap = await db
+    .collection("driverApplications")
+    .where("authUid", "==", uid)
+    .limit(1)
+    .get()
+  const driverDoc = driverSnap.docs[0]
+  if (driverDoc) {
+    const data = driverDoc.data()
+    let fleetId: string | null = data.fleetId ?? null
+    if (!fleetId) {
+      fleetId = await resolveFleetIdByName(db, data.fleetName)
+      if (fleetId) {
+        await driverDoc.ref.update({ fleetId })
+        result.driverFleetIdBackfilled = 1
+      }
+    }
+    if (fleetId) {
+      result.vehicleFleetIdBackfilled = await backfillVehiclesForDriver(db, driverDoc.id, fleetId)
+    }
+    await auth.setCustomUserClaims(uid, {
+      role: "driver",
+      driverId: driverDoc.id,
+      ...(fleetId ? { fleetId } : {}),
+    })
+    result.role = "driver"
+    result.reason = `linked to driverApplications/${driverDoc.id}`
+    return result
+  }
+
+  // 3. Bootstrap super_admin — allowlisted, email-verified, and only while no
+  //    super_admin exists anywhere in the project. Deliberately the last
+  //    branch and deliberately narrow: this is the only path that can create
+  //    the first privileged account, and it closes itself once used.
+  const allowlist = (process.env.BOOTSTRAP_SUPER_ADMIN_EMAILS ?? "")
+    .split(",")
+    .map((entry) => entry.trim().toLowerCase())
+    .filter(Boolean)
+
+  const callerEmail = email?.toLowerCase()
+
+  if (!callerEmail || !allowlist.includes(callerEmail)) {
+    result.reason = "no linked application document; not an allowlisted bootstrap address"
+    return result
+  }
+  if (!emailVerified) {
+    result.reason = "allowlisted bootstrap address, but the account's email is not verified"
+    return result
+  }
+  if (await superAdminExists(auth)) {
+    result.reason = "bootstrap already used — a super_admin exists, so this path is closed"
+    return result
+  }
+
+  await auth.setCustomUserClaims(uid, { role: "super_admin" })
+  result.role = "super_admin"
+  result.reason = "bootstrapped from BOOTSTRAP_SUPER_ADMIN_EMAILS (first super_admin)"
+  return result
+}
+
 export async function POST(request: Request) {
   try {
+    const url = new URL(request.url)
+    const syncAll = url.searchParams.get("all") === "true"
+
+    const db = adminDb()
+    const auth = adminAuth()
+
+    // ---------------------------------------------------------------------
+    // Project-wide sweep. Genuine maintenance operation, so it requires an
+    // existing super_admin rather than merely a signed-in user.
+    // ---------------------------------------------------------------------
+    if (syncAll) {
+      const decoded = await requireRole(request, ["super_admin"])
+      if (!decoded) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+      }
+
+      const summary = {
+        fleetsClaimed: 0,
+        driversClaimed: 0,
+        driverFleetIdBackfilled: 0,
+        vehicleFleetIdBackfilled: 0,
+        errors: [] as string[],
+      }
+
+      const fleetSnap = await db.collection("fleetApplications").get()
+      for (const doc of fleetSnap.docs) {
+        const data = doc.data()
+        if (!data.authUid) continue
+        try {
+          await auth.setCustomUserClaims(data.authUid, { role: "fleet_admin", fleetId: doc.id })
+          summary.fleetsClaimed++
+        } catch (e) {
+          summary.errors.push(`fleetApplications/${doc.id}: ${String(e)}`)
+        }
+      }
+
+      const driverSnap = await db.collection("driverApplications").get()
+      for (const doc of driverSnap.docs) {
+        const data = doc.data()
+        let fleetId: string | null = data.fleetId ?? null
+        if (!fleetId) {
+          fleetId = await resolveFleetIdByName(db, data.fleetName)
+          if (fleetId) {
+            await doc.ref.update({ fleetId })
+            summary.driverFleetIdBackfilled++
+          }
+        }
+        if (!data.authUid) continue
+        try {
+          await auth.setCustomUserClaims(data.authUid, {
+            role: "driver",
+            driverId: doc.id,
+            ...(fleetId ? { fleetId } : {}),
+          })
+          summary.driversClaimed++
+        } catch (e) {
+          summary.errors.push(`driverApplications/${doc.id}: ${String(e)}`)
+        }
+      }
+
+      const vehicleSnap = await db.collection("vehicles").get()
+      for (const doc of vehicleSnap.docs) {
+        const data = doc.data()
+        if (data.fleetId || !data.driverId) continue
+        const driverDoc = await db.collection("driverApplications").doc(data.driverId).get()
+        const driverFleetId = driverDoc.exists ? driverDoc.data()?.fleetId : null
+        if (driverFleetId) {
+          await doc.ref.update({ fleetId: driverFleetId })
+          summary.vehicleFleetIdBackfilled++
+        }
+      }
+
+      return NextResponse.json({ ok: true, scope: "all", summary })
+    }
+
+    // ---------------------------------------------------------------------
+    // Default: sync the caller's own claims only. Any signed-in user may do
+    // this — it is the session self-heal the shells depend on — but it can
+    // only ever affect the calling account, and only from Firestore state.
+    // ---------------------------------------------------------------------
     const decoded = await requireAdmin(request)
     if (!decoded) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const db = adminDb()
-    const auth = adminAuth()
-    const summary = {
-      fleetsClaimed: 0,
-      driversClaimed: 0,
-      driverFleetIdBackfilled: 0,
-      vehicleFleetIdBackfilled: 0,
-      superAdminFallback: 0,
-      errors: [] as string[],
-    }
+    const summary = await syncClaimsForUser(
+      auth,
+      db,
+      decoded.uid,
+      decoded.email,
+      decoded.email_verified === true
+    )
 
-    const claimedUids = new Set<string>()
-
-    const fleetSnap = await db.collection("fleetApplications").get()
-    for (const doc of fleetSnap.docs) {
-      const data = doc.data()
-      if (!data.authUid) continue
-      try {
-        await auth.setCustomUserClaims(data.authUid, { role: "fleet_admin", fleetId: doc.id })
-        claimedUids.add(data.authUid)
-        summary.fleetsClaimed++
-      } catch (e) {
-        summary.errors.push(`fleetApplications/${doc.id}: ${String(e)}`)
-      }
-    }
-
-    const driverSnap = await db.collection("driverApplications").get()
-    for (const doc of driverSnap.docs) {
-      const data = doc.data()
-      let fleetId: string | null = data.fleetId ?? null
-      if (!fleetId) {
-        fleetId = await resolveFleetIdByName(db, data.fleetName)
-        if (fleetId) {
-          await doc.ref.update({ fleetId })
-          summary.driverFleetIdBackfilled++
-        }
-      }
-      if (!data.authUid) continue
-      try {
-        await auth.setCustomUserClaims(data.authUid, {
-          role: "driver",
-          driverId: doc.id,
-          ...(fleetId ? { fleetId } : {}),
-        })
-        claimedUids.add(data.authUid)
-        summary.driversClaimed++
-      } catch (e) {
-        summary.errors.push(`driverApplications/${doc.id}: ${String(e)}`)
-      }
-    }
-
-    const vehicleSnap = await db.collection("vehicles").get()
-    for (const doc of vehicleSnap.docs) {
-      const data = doc.data()
-      if (data.fleetId || !data.driverId) continue
-      const driverDoc = await db.collection("driverApplications").doc(data.driverId).get()
-      const driverFleetId = driverDoc.exists ? driverDoc.data()?.fleetId : null
-      if (driverFleetId) {
-        await doc.ref.update({ fleetId: driverFleetId })
-        summary.vehicleFleetIdBackfilled++
-      }
-    }
-
-    // Any other existing Auth account not linked to a driver/fleet
-    // application doc predates both application flows entirely — today
-    // that only describes manually-created Super Admin accounts. Flagged
-    // explicitly in BLAK_IMPLEMENTATION_STATUS.md as an assumption to
-    // revisit once passenger accounts exist.
-    let pageToken: string | undefined
-    do {
-      const page = await auth.listUsers(1000, pageToken)
-      for (const user of page.users) {
-        if (claimedUids.has(user.uid)) continue
-        if ((user.customClaims as Record<string, unknown> | undefined)?.role) continue
-        try {
-          await auth.setCustomUserClaims(user.uid, { role: "super_admin" })
-          summary.superAdminFallback++
-        } catch (e) {
-          summary.errors.push(`auth user ${user.uid}: ${String(e)}`)
-        }
-      }
-      pageToken = page.pageToken
-    } while (pageToken)
-
-    return NextResponse.json({ ok: true, summary })
+    return NextResponse.json({ ok: true, scope: "self", summary })
   } catch (error) {
     console.error("admin/backfill-claims POST failed:", error)
     return NextResponse.json({ error: "Server error" }, { status: 500 })
