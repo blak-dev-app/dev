@@ -8,6 +8,11 @@ import { Label } from "@blak/ui/components/label"
 
 const VEHICLE_TYPES = ["Sedan", "SUV", "Luxury Sedan", "Van", "Motorcycle"]
 
+/** Sentinel for "not attached to any fleet" — see the fleet select below. */
+const INDEPENDENT = "independent"
+
+type FleetOption = { id: string; fleetName: string }
+
 const INITIAL_VALUES = {
   fullName: "",
   email: "",
@@ -18,6 +23,7 @@ const INITIAL_VALUES = {
   yearsExperience: "",
   vehicleType: "",
   hasOwnVehicle: "yes",
+  fleetId: INDEPENDENT,
   acknowledgment: false,
 }
 
@@ -27,6 +33,33 @@ export function DriverForm() {
   const [error, setError] = React.useState("")
   const [done, setDone] = React.useState(false)
   const [values, setValues] = React.useState(INITIAL_VALUES)
+  const [fleets, setFleets] = React.useState<FleetOption[]>([])
+  const [fleetsLoading, setFleetsLoading] = React.useState(true)
+
+  // Approved fleets, from a server route rather than a direct Firestore read:
+  // this form is unauthenticated and firestore.rules requires auth on
+  // fleetApplications. See app/api/public/fleets/route.ts.
+  //
+  // If the lookup fails or returns nothing, the select still renders with the
+  // independent option only — an applicant is never blocked by it.
+  React.useEffect(() => {
+    let cancelled = false
+    fetch("/api/public/fleets")
+      .then((res) => (res.ok ? res.json() : { fleets: [] }))
+      .then((data) => {
+        if (cancelled) return
+        setFleets(Array.isArray(data?.fleets) ? data.fleets : [])
+      })
+      .catch(() => {
+        if (!cancelled) setFleets([])
+      })
+      .finally(() => {
+        if (!cancelled) setFleetsLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   function set<K extends keyof typeof values>(key: K, value: (typeof values)[K]) {
     setValues((v) => ({ ...v, [key]: value }))
@@ -60,6 +93,8 @@ export function DriverForm() {
       const res = await fetch("/api/driver-applications", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        // fleetId is sent as-is; the server validates it against Firestore and
+        // derives the fleet's name itself. "independent" is treated as no fleet.
         body: JSON.stringify(values),
       })
       if (!res.ok) throw new Error("Request failed")
@@ -114,7 +149,7 @@ export function DriverForm() {
         </div>
       </div>
       <div className="grid gap-2">
-        <Label htmlFor="licenseNumber">Driver's license number</Label>
+        <Label htmlFor="licenseNumber">Driver&apos;s license number</Label>
         <Input
           id="licenseNumber"
           value={values.licenseNumber}
@@ -146,6 +181,30 @@ export function DriverForm() {
             ))}
           </select>
         </div>
+      </div>
+      <div className="grid gap-2">
+        <Label htmlFor="fleetId">Are you joining through a fleet?</Label>
+        <select
+          id="fleetId"
+          value={values.fleetId}
+          onChange={(e) => set("fleetId", e.target.value)}
+          disabled={fleetsLoading}
+          className="h-9 rounded-md border border-input bg-transparent px-3 text-sm"
+        >
+          <option value={INDEPENDENT}>No — I&apos;m applying as an independent driver</option>
+          {fleets.map((f) => (
+            <option key={f.id} value={f.id}>
+              {f.fleetName}
+            </option>
+          ))}
+        </select>
+        <p className="text-xs text-muted-foreground">
+          {fleetsLoading
+            ? "Loading fleets…"
+            : fleets.length === 0
+              ? "No fleets are currently accepting drivers — apply as an independent driver and BLAK will be in touch."
+              : "Pick the fleet that asked you to apply. If you're not sure, choose independent — this can be changed later."}
+        </p>
       </div>
       <div className="grid gap-2">
         <Label htmlFor="hasOwnVehicle">Do you have your own vehicle?</Label>
