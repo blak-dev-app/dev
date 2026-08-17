@@ -53,11 +53,11 @@ export default function DriverTodayPage() {
   const [dataLoading, setDataLoading] = React.useState(true)
 
   // Every query below is scoped to this driver's own driverId, resolved
-  // from the signed-in user's Firebase Auth custom claim â never from a
-  // URL or form value â see BLAK_IMPLEMENTATION_STATUS.md Phase 2/5.
+  // from the signed-in user's Firebase Auth custom claim — never from a
+  // URL or form value — see BLAK_IMPLEMENTATION_STATUS.md Phase 2/5.
   // Rides are sorted client-side rather than via a server orderBy so the
   // query stays a single equality filter and doesn't need a new Firestore
-  // composite index on (driverId, createdAt) â same pattern used
+  // composite index on (driverId, createdAt) — same pattern used
   // throughout the Fleet Admin pages (Phase 4).
   React.useEffect(() => {
     if (!driverId) {
@@ -183,6 +183,7 @@ export default function DriverTodayPage() {
                 <div className="rounded-lg bg-muted p-2">
                   <div className="text-[10px] text-muted-foreground">Completed</div>
                   <div className="text-sm font-semibold">{completed}</div>
+                </div>
               </div>
             </div>
 
