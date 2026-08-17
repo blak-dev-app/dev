@@ -21,6 +21,7 @@ export const fleetNavItems: AdminNavItem[] = [
   { label: "Dashboard", href: "/admin/fleet" },
   { label: "Drivers", href: "/admin/fleet/drivers" },
   { label: "Performance", href: "/admin/fleet/performance" },
+  { label: "Analytics", href: "/admin/fleet/analytics" },
   { label: "Vehicles", href: "/admin/fleet/vehicles" },
   { label: "Rides", href: "/admin/fleet/rides" },
   { label: "Payments", href: "/admin/fleet/payments" },
