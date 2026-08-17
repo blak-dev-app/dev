@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { collection, onSnapshot, orderBy, query } from "firebase/firestore"
+import { collection, onSnapshot, query, where } from "firebase/firestore"
 import { useSearchParams } from "next/navigation"
 import { db } from "@/lib/firebase"
 import { AdminShell } from "@/components/admin/admin-shell"
@@ -10,6 +10,7 @@ import { PageHeader } from "@/components/admin/page-header"
 import { DataTable, Pagination, type Column } from "@/components/admin/data-table"
 import { StatusFilter } from "@/components/admin/status-filter"
 import { fleetNavItems } from "@/lib/admin/nav"
+import { useAdminClaims } from "@/lib/auth-claims"
 import { Button } from "@blak/ui/components/button"
 import { AddQueryModal } from "@/components/admin/add-query-modal"
 import { Plus } from "lucide-react"
@@ -23,9 +24,14 @@ function formatDate(ts: any) {
   return d.toLocaleDateString("en-US", { day: "2-digit", month: "2-digit", year: "numeric" })
 }
 
+function toMillis(ts: any) {
+  return ts?.toMillis ? ts.toMillis() : ts ? new Date(ts).getTime() : 0
+}
+
 function FleetQueriesContent() {
   const searchParams = useSearchParams()
   const type = searchParams.get("type") || "admin"
+  const { fleetId, loading: claimsLoading } = useAdminClaims()
   const [docs, setDocs] = React.useState<{ id: string; data: any }[]>([])
   const [loading, setLoading] = React.useState(true)
   const [addOpen, setAddOpen] = React.useState(false)
@@ -33,23 +39,34 @@ function FleetQueriesContent() {
   const [statusFilter, setStatusFilter] = React.useState<string | null>(null)
   const [page, setPage] = React.useState(1)
 
+  // Unified `tickets` collection (shared with Super Admin's Tickets
+  // module, see PRODUCTION_READY_TRACKER.md Phase 2), now also scoped to
+  // this fleet's own fleetId — see BLAK_IMPLEMENTATION_STATUS.md Phase 2/4.
+  // `audience`/`type` are still filtered client-side (unchanged, avoids a
+  // composite index for those two fields); sorting by createdAt is now
+  // also done client-side rather than via a server orderBy, so this query
+  // stays a single equality filter and doesn't need a NEW composite index
+  // on (fleetId, createdAt) on top of that. Tickets created before the
+  // Phase 2 fleetId rollout (or via any path that doesn't set fleetId)
+  // won't appear here — see Ticket.fleetId in lib/types.ts.
   React.useEffect(() => {
-    // Unified `tickets` collection (shared with Super Admin's Tickets module,
-    // see PRODUCTION_READY_TRACKER.md Phase 2). `audience` scopes visibility;
-    // filtered client-side (not in the query) to avoid requiring a Firestore
-    // composite index for an equality-filter + orderBy-on-a-different-field
-    // combination — same pattern already used for `type` below.
-    const q = query(collection(db, "tickets"), orderBy("createdAt", "desc"))
+    if (!fleetId) {
+      setLoading(false)
+      return
+    }
+    const q = query(collection(db, "tickets"), where("fleetId", "==", fleetId))
     const unsub = onSnapshot(
       q,
       (snap) => {
-        setDocs(snap.docs.map((d) => ({ id: d.id, data: d.data() })))
+        const next = snap.docs.map((d) => ({ id: d.id, data: d.data() }))
+        next.sort((a, b) => toMillis(b.data.createdAt) - toMillis(a.data.createdAt))
+        setDocs(next)
         setLoading(false)
       },
       () => setLoading(false)
     )
     return () => unsub()
-  }, [])
+  }, [fleetId])
 
   React.useEffect(() => {
     setPage(1)
@@ -117,7 +134,7 @@ function FleetQueriesContent() {
             <StatusFilter options={STATUS_OPTIONS} value={statusFilter} onChange={setStatusFilter} />
           ) : (
             <div className="flex gap-2">
-              <Button size="sm" onClick={() => setAddOpen(true)}>
+              <Button size="sm" onClick={() => setAddOpen(true)} disabled={!fleetId}>
                 <Plus className="mr-1 size-4" />
                 Add a query
               </Button>
@@ -129,8 +146,13 @@ function FleetQueriesContent() {
       <p className="mb-4 text-xs font-semibold text-muted-foreground">
         Live from Firestore — showing {type === "driver" ? "Driver" : "Admin"} queries.
       </p>
-      {loading ? (
+      {claimsLoading || loading ? (
         <p className="text-sm text-muted-foreground">Loading…</p>
+      ) : !fleetId ? (
+        <p className="text-sm text-muted-foreground">
+          This account isn&apos;t linked to a fleet yet. Contact BLAK Super Admin to have your fleet
+          profile connected to this login.
+        </p>
       ) : filtered.length === 0 ? (
         <p className="text-sm text-muted-foreground">No queries yet.</p>
       ) : filteredDocs.length === 0 ? (
@@ -144,7 +166,7 @@ function FleetQueriesContent() {
         </>
       )}
 
-      <AddQueryModal open={addOpen} onClose={() => setAddOpen(false)} />
+      <AddQueryModal open={addOpen} onClose={() => setAddOpen(false)} fleetId={fleetId} />
     </AdminShell>
   )
 }
