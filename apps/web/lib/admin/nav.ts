@@ -32,6 +32,7 @@ export const fleetNavItems: AdminNavItem[] = [
       { label: "Driver", href: "/admin/fleet/queries?type=driver" },
     ],
   },
+  { label: "Profile", href: "/admin/fleet/profile" },
 ]
 
 /**
