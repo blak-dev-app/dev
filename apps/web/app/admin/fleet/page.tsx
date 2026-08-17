@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import Link from "next/link"
 import { collection, onSnapshot, query, where } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { AdminShell } from "@/components/admin/admin-shell"
@@ -69,21 +70,25 @@ export default function FleetAdminDashboard() {
   const [vehicles, setVehicles] = React.useState<Doc[]>([])
   const [rides, setRides] = React.useState<Doc[]>([])
   const [transactions, setTransactions] = React.useState<Doc[]>([])
+  const [tickets, setTickets] = React.useState<{ id: string; data: Doc }[]>([])
   const [dataLoading, setDataLoading] = React.useState(true)
 
   // Every query below is scoped to this fleet's own fleetId, resolved from
   // the signed-in user's Firebase Auth custom claim — never from a URL or
   // form value a fleet admin could tamper with (spec section 31). See
-  // BLAK_IMPLEMENTATION_STATUS.md Phase 2/4. Transactions are sorted
-  // client-side rather than via a server orderBy so that query stays a
-  // single equality filter and doesn't need a new Firestore composite
-  // index on (fleetId, createdAt). The "Recent Queries" widget that was
-  // here previously read the legacy `queries` collection, which the rest
-  // of the app stopped writing to once tickets were unified
-  // (PRODUCTION_READY_TRACKER.md Phase 2) — that was already a bug before
-  // this change (it always showed "No queries yet"), not something
-  // introduced here; left as-is pending a dedicated fix so this pass stays
-  // scoped to fleet-isolation.
+  // BLAK_IMPLEMENTATION_STATUS.md Phase 2/4. Transactions and tickets are
+  // sorted client-side rather than via a server orderBy so that each query
+  // stays a single equality filter and doesn't need a new Firestore
+  // composite index on (fleetId, createdAt).
+  //
+  // Recent Queries fixed 2026-08-17: this widget previously rendered a
+  // hardcoded "0" and a permanent "No queries yet." because it was still
+  // pointed at the legacy `queries` collection, which the app stopped
+  // writing to when tickets were unified (PRODUCTION_READY_TRACKER.md
+  // Phase 2). It now reads the same fleet-scoped `tickets` documents the
+  // Queries page reads, so the count and the list are real. Tickets created
+  // before the Phase 2 fleetId rollout carry no fleetId and are not shown —
+  // see Ticket.fleetId in lib/types.ts.
   React.useEffect(() => {
     if (!fleetId) {
       setDataLoading(false)
@@ -106,6 +111,13 @@ export default function FleetAdminDashboard() {
         next.sort((a, b) => toMillis(b.createdAt) - toMillis(a.createdAt))
         setTransactions(next)
       }),
+      onSnapshot(query(collection(db, "tickets"), where("fleetId", "==", fleetId)), (snap) => {
+        const next = snap.docs
+          .map((d) => ({ id: d.id, data: d.data() }))
+          .filter(({ data }) => data.audience === "fleet_admin")
+        next.sort((a, b) => toMillis(b.data.createdAt) - toMillis(a.data.createdAt))
+        setTickets(next)
+      }),
     ]
     return () => unsubs.forEach((u) => u())
   }, [fleetId])
@@ -124,6 +136,8 @@ export default function FleetAdminDashboard() {
     .filter((t) => t.type === "credit")
     .reduce((sum, t) => sum + (Number(t.amount) || 0), 0)
   const recentTransactions = transactions.slice(0, 6)
+  const openTickets = tickets.filter(({ data }) => (data.status || "New") !== "Closed")
+  const recentTickets = openTickets.slice(0, 4)
 
   return (
     <AdminShell navItems={fleetNavItems} welcomeName="Fleet Admin">
@@ -151,10 +165,39 @@ export default function FleetAdminDashboard() {
           <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-3">
             <div className="rounded-xl border border-border bg-card p-6">
               <h3 className="mb-4 flex items-center justify-between text-sm font-semibold">
-                Recent Queries <span className="text-primary">0</span>
+                Recent Queries <span className="text-primary">{openTickets.length}</span>
               </h3>
-              <p className="py-2 text-xs text-muted-foreground">No queries yet.</p>
-              <p className="mt-4 cursor-pointer text-xs font-medium text-primary">View all</p>
+              {recentTickets.length === 0 ? (
+                <p className="py-2 text-xs text-muted-foreground">No open queries.</p>
+              ) : (
+                <div className="flex flex-col gap-3">
+                  {recentTickets.map(({ id, data }) => (
+                    <Link
+                      key={id}
+                      href={`/admin/fleet/queries/${id}`}
+                      className="flex items-center justify-between gap-3 text-sm hover:opacity-80"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate font-medium">
+                          {data.subject || id.slice(0, 8).toUpperCase()}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {formatDate(data.createdAt)}
+                        </div>
+                      </div>
+                      <span className="shrink-0 rounded-full bg-muted px-2 py-1 text-[10px] font-semibold">
+                        {data.status || "New"}
+                      </span>
+                    </Link>
+                  ))}
+                </div>
+              )}
+              <Link
+                href="/admin/fleet/queries?type=admin"
+                className="mt-4 block text-xs font-medium text-primary"
+              >
+                View all
+              </Link>
             </div>
 
             <div className="rounded-xl border border-border bg-card p-6">
