@@ -2,13 +2,14 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { collection, onSnapshot, orderBy, query } from "firebase/firestore"
+import { collection, onSnapshot, orderBy, query, where } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { AdminShell } from "@/components/admin/admin-shell"
 import { PageHeader } from "@/components/admin/page-header"
 import { DataTable, Pagination, type Column } from "@/components/admin/data-table"
 import { StatusFilter } from "@/components/admin/status-filter"
 import { fleetNavItems } from "@/lib/admin/nav"
+import { useAdminClaims } from "@/lib/auth-claims"
 import { Button } from "@blak/ui/components/button"
 
 const columns: Column[] = [
@@ -26,7 +27,7 @@ const STATUS_OPTIONS = ["Active", "Pending Review", "Documents Submitted", "Invi
 const PAGE_SIZE = 10
 
 function formatDate(ts: any) {
-  if (!ts) return "—"
+  if (!ts) return "â"
   const d = ts.toDate ? ts.toDate() : new Date(ts)
   return d.toLocaleDateString("en-US", { day: "2-digit", month: "2-digit", year: "numeric" })
 }
@@ -36,14 +37,28 @@ function displayStatus(d: any) {
 }
 
 export default function FleetDriversPage() {
+  const { fleetId, loading: claimsLoading } = useAdminClaims()
   const [docs, setDocs] = React.useState<{ id: string; data: any }[]>([])
   const [loading, setLoading] = React.useState(true)
   const [searchTerm, setSearchTerm] = React.useState("")
   const [statusFilter, setStatusFilter] = React.useState<string | null>(null)
   const [page, setPage] = React.useState(1)
 
+  // Scoped to this fleet's own fleetId (from the signed-in user's Auth
+  // custom claim) instead of the previous unscoped collection(db,
+  // "driverApplications") â see BLAK_IMPLEMENTATION_STATUS.md Phase 4.
+  // Before this fix, any Fleet Admin login saw every driver on the
+  // platform, identical to Super Admin's own Drivers list.
   React.useEffect(() => {
-    const q = query(collection(db, "driverApplications"), orderBy("createdAt", "desc"))
+    if (!fleetId) {
+      setLoading(false)
+      return
+    }
+    const q = query(
+      collection(db, "driverApplications"),
+      where("fleetId", "==", fleetId),
+      orderBy("createdAt", "desc")
+    )
     const unsub = onSnapshot(
       q,
       (snap) => {
@@ -53,7 +68,7 @@ export default function FleetDriversPage() {
       () => setLoading(false)
     )
     return () => unsub()
-  }, [])
+  }, [fleetId])
 
   React.useEffect(() => {
     setPage(1)
@@ -77,13 +92,13 @@ export default function FleetDriversPage() {
     idx: (page - 1) * PAGE_SIZE + i + 1,
     name: (
       <Link href={`/admin/fleet/drivers/${id}`} className="font-medium hover:underline">
-        {d.fullName || d.username || "—"}
+        {d.fullName || d.username || "â"}
       </Link>
     ),
     driverId: id.slice(0, 8).toUpperCase(),
     registered: formatDate(d.createdAt),
-    email: d.email || "—",
-    mobile: d.phone || "—",
+    email: d.email || "â",
+    mobile: d.phone || "â",
     status: displayStatus(d),
     actions: (
       <div className="flex flex-wrap gap-2">
@@ -108,12 +123,17 @@ export default function FleetDriversPage() {
         actions={<StatusFilter options={STATUS_OPTIONS} value={statusFilter} onChange={setStatusFilter} />}
       />
       <p className="mb-4 text-xs font-semibold text-muted-foreground">
-        Live from Firestore — drivers onboarded through Join Us appear here automatically.
+        Live from Firestore â drivers invited into your fleet appear here automatically.
       </p>
-      {loading ? (
-        <p className="text-sm text-muted-foreground">Loading…</p>
+      {claimsLoading || loading ? (
+        <p className="text-sm text-muted-foreground">Loadingâ¦</p>
+      ) : !fleetId ? (
+        <p className="text-sm text-muted-foreground">
+          This account isn't linked to a fleet yet. Contact BLAK Super Admin to have your fleet
+          profile connected to this login.
+        </p>
       ) : docs.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No drivers yet.</p>
+        <p className="text-sm text-muted-foreground">No drivers have been added to this fleet yet.</p>
       ) : filteredDocs.length === 0 ? (
         <p className="text-sm text-muted-foreground">
           No drivers match your {isFiltered ? "search/filter" : "search"}.

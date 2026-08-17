@@ -32,3 +32,21 @@ export const fleetNavItems: AdminNavItem[] = [
     ],
   },
 ]
+
+/**
+ * Post-approval Driver Dashboard nav â added 2026-08-17, see
+ * BLAK_IMPLEMENTATION_STATUS.md Phase 2/5. The pre-existing `/driver`
+ * route (onboarding: apply, upload documents, wait for approval) is
+ * untouched by this addition; these items live under `/driver/dashboard/*`,
+ * the real post-approval experience built out in Phase 5.
+ */
+export const driverNavItems: AdminNavItem[] = [
+  { label: "Dashboard", href: "/driver/dashboard" },
+  { label: "My Rides", href: "/driver/dashboard/rides" },
+  { label: "Earnings", href: "/driver/dashboard/earnings" },
+  { label: "Performance", href: "/driver/dashboard/performance" },
+  { label: "Documents", href: "/driver/dashboard/documents" },
+  { label: "Vehicle", href: "/driver/dashboard/vehicle" },
+  { label: "Support", href: "/driver/dashboard/support" },
+  { label: "Profile", href: "/driver/dashboard/profile" },
+]

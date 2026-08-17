@@ -2,7 +2,8 @@ import { NextResponse } from "next/server"
 import { FieldValue } from "firebase-admin/firestore"
 import { adminAuth, adminDb } from "@/lib/firebase-admin"
 import { queueEmail } from "@/lib/mailer"
-import { requireAdmin } from "@/lib/require-admin"
+import { requireRole } from "@/lib/require-admin"
+import { resolveFleetIdByName } from "@/lib/fleet-resolve"
 
 const COLLECTIONS = { driver: "driverApplications", fleet: "fleetApplications" } as const
 const REDIRECT_PATHS = { driver: "/driver/login", fleet: "/fleet-onboarding/login" } as const
@@ -10,7 +11,7 @@ const LABELS = { driver: "Driver", fleet: "Fleet Partner" } as const
 
 export async function POST(request: Request) {
   try {
-    const decoded = await requireAdmin(request)
+    const decoded = await requireRole(request, ["super_admin"])
     if (!decoded) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
@@ -30,21 +31,54 @@ export async function POST(request: Request) {
     if (!email) {
       return NextResponse.json({ error: "Application has no email on file" }, { status: 400 })
     }
+
     let userRecord
-    try { userRecord = await adminAuth().getUserByEmail(email) }
-    catch { userRecord = await adminAuth().createUser({ email }) }
+    try {
+      userRecord = await adminAuth().getUserByEmail(email)
+    } catch {
+      userRecord = await adminAuth().createUser({ email })
+    }
+
+    // Resolve + persist fleetId, then set the real role claim for this
+    // account. This is what makes /admin/fleet/login (fleet_admin) and
+    // /driver/login (driver) actually scoped once the person signs in —
+    // see BLAK_IMPLEMENTATION_STATUS.md Phase 2.
+    let fleetId: string | null = null
+    if (type === "fleet") {
+      fleetId = id
+    } else {
+      fleetId = data.fleetId ?? (await resolveFleetIdByName(adminDb(), data.fleetName))
+    }
+
+    await adminAuth().setCustomUserClaims(userRecord.uid, {
+      role: type === "driver" ? "driver" : "fleet_admin",
+      ...(type === "driver" ? { driverId: id } : {}),
+      ...(fleetId ? { fleetId } : {}),
+    })
+
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://dev-web-blak-dev.vercel.app"
     const inviteLink = await adminAuth().generatePasswordResetLink(email, {
       url: `${siteUrl}${REDIRECT_PATHS[type as "driver" | "fleet"]}`,
     })
-    await docRef.update({ authUid: userRecord.uid, status: "Invited", inviteLink, invitedAt: FieldValue.serverTimestamp() })
+
+    await docRef.update({
+      authUid: userRecord.uid,
+      status: "Invited",
+      inviteLink,
+      invitedAt: FieldValue.serverTimestamp(),
+      ...(type === "driver" && fleetId ? { fleetId } : {}),
+    })
+
     try {
       await queueEmail({
         to: email,
         subject: `You're invited to complete your BLAK ${LABELS[type as "driver" | "fleet"]} application`,
         html: `<p>Hi ${name},</p><p>Your BLAK ${LABELS[type as "driver" | "fleet"]} application has been approved for the next step. Click the link below to set your password and log in to upload your documents:</p><p><a href="${inviteLink}">${inviteLink}</a></p><p>— The BLAK Team</p>`,
       })
-    } catch (mailError) { console.error("queueEmail failed (invite link still generated):", mailError) }
+    } catch (mailError) {
+      console.error("queueEmail failed (invite link still generated):", mailError)
+    }
+
     return NextResponse.json({ inviteLink })
   } catch (error) {
     console.error("admin/invite POST failed:", error)
