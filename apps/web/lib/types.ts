@@ -6,16 +6,39 @@
  * against apps/web/app/admin/** and apps/web/app/driver/** on 2026-08-16),
  * NOT an idealized future schema. Fields marked "not yet populated" are part
  * of the target schema from the BLAK Production-Ready Master Prompt but are
- * not written by any current code path — they're included so future work can
+ * not written by any current code path â they're included so future work can
  * add them additively without another types rewrite.
  *
- * Do not use `any` for these entities going forward — import from here.
+ * Do not use `any` for these entities going forward â import from here.
  */
 
 import type { Timestamp } from "firebase/firestore"
 
 /** Firestore timestamp as read from a snapshot, or already-converted Date, or undefined/null before hydration. */
 export type FirestoreTimestamp = Timestamp | Date | string | null | undefined
+
+/**
+ * The three admin/operator account roles, stored as a Firebase Auth custom
+ * claim (`request.auth.token.role` in firestore.rules) â see
+ * BLAK_IMPLEMENTATION_STATUS.md Phase 2. Passenger accounts don't exist in
+ * the codebase yet, so there is no "passenger" role here; add one when that
+ * app ships rather than guessing its shape now.
+ */
+export type UserRole = "super_admin" | "fleet_admin" | "driver"
+
+/**
+ * Shape of the custom claims set via adminAuth().setCustomUserClaims() and
+ * read back via getIdTokenResult().claims. fleetId is only ever set for
+ * fleet_admin and driver roles; driverId only for driver. Set at invite
+ * time (api/admin/invite), refreshed at approval time
+ * (api/admin/final-decision), and self-healed for pre-existing accounts by
+ * api/admin/backfill-claims.
+ */
+export interface AuthClaims {
+  role?: UserRole
+  fleetId?: string
+  driverId?: string
+}
 
 export type DriverStatus =
   | "Pending Review"
@@ -43,7 +66,14 @@ export interface Driver {
   insuranceNumber?: string
   vehicleType?: string
   fleetName?: string
-  /** Not yet populated by any code path — drivers are only linked to fleets by name today, not by ID. Needed for Phase 2 ID-relationship hardening. */
+  /**
+   * Resolved from fleetName and actively backfilled by
+   * /api/admin/invite, /api/admin/final-decision, and
+   * /api/admin/backfill-claims (see BLAK_IMPLEMENTATION_STATUS.md
+   * Phase 2). Still optional: an independent driver, or a fleetName that
+   * doesn't uniquely match a fleetApplications doc, is left unlinked
+   * rather than guessed â see lib/fleet-resolve.ts.
+   */
   fleetId?: string
   status?: DriverStatus
   authUid?: string
@@ -79,7 +109,12 @@ export interface Vehicle {
   vehicleType?: string
   driverId?: string
   driverName?: string
-  /** Not yet populated — vehicles aren't linked to a fleet by ID today. */
+  /**
+   * Backfilled from the owning driver's fleetId by
+   * /api/admin/backfill-claims whenever a vehicle has a driverId but no
+   * fleetId of its own â see BLAK_IMPLEMENTATION_STATUS.md Phase 2.
+   * Still optional for vehicles with no driver assigned yet.
+   */
   fleetId?: string
   status?: VehicleStatus
   createdAt?: FirestoreTimestamp
@@ -114,6 +149,16 @@ export interface Ride {
   driverName?: string
   vehicleName?: string
   blakId?: string
+  /**
+   * Added 2026-08-17 for fleet-scoped Firestore rules/queries â see
+   * BLAK_IMPLEMENTATION_STATUS.md Phase 2. Only populated on rides
+   * created after this rollout; historical rides predating it have no
+   * reliable source of which fleet applied at the time, and are
+   * deliberately NOT backfilled (guessing would fabricate history â spec
+   * sections 18-19, 42-43). Those rides are only visible to super_admin
+   * until a real backfill source of truth exists.
+   */
+  fleetId?: string
   from?: string
   to?: string
   pickup?: { address?: string }
@@ -143,6 +188,14 @@ export interface Transaction {
   type?: TransactionType
   amount?: number
   status?: string
+  /**
+   * Added 2026-08-17 alongside `fleetId` below for fleet/driver-scoped
+   * Firestore rules/queries â see BLAK_IMPLEMENTATION_STATUS.md Phase 2.
+   * Same historical-backfill caveat as Ride.fleetId: only populated on
+   * transactions created after this rollout.
+   */
+  driverId?: string
+  fleetId?: string
   createdAt?: FirestoreTimestamp
 }
 
@@ -154,7 +207,7 @@ export type CouponStatus = "Active" | "Inactive"
  *
  * NOTE: `value` is currently a free-text string (e.g. "20%" or "$50") rather
  * than a validated numeric amount, and there is no usageLimit/minFare/expiry
- * enforcement — this is a known gap tracked under Phase 6 (Financials) /
+ * enforcement â this is a known gap tracked under Phase 6 (Financials) /
  * Section 22 of the master prompt.
  */
 export interface Coupon {
@@ -172,11 +225,11 @@ export interface Coupon {
  * Canonical unified support-ticket model (collection: `tickets`).
  *
  * Replaces the two previously-disconnected `queries` (Fleet Admin) and
- * `driverTickets` (Super Admin) collections — see PRODUCTION_READY_TRACKER.md
+ * `driverTickets` (Super Admin) collections â see PRODUCTION_READY_TRACKER.md
  * Phase 2 for the migration rationale. `audience` decides which dashboard a
  * ticket is shown in; `type` decides the Admin/Driver sub-view within Fleet
  * Admin's Queries page. Legacy `queries`/`driverTickets` docs written before
- * this migration are NOT automatically moved into `tickets` — see task
+ * this migration are NOT automatically moved into `tickets` â see task
  * "Decide + migrate" for that follow-up.
  */
 export interface Ticket {
@@ -233,7 +286,7 @@ export interface FleetQuery {
 // Included so future work has a stable shape to build against.
 // ---------------------------------------------------------------------------
 
-/** Target collection: `notifications` — not yet written by any code path. */
+/** Target collection: `notifications` â not yet written by any code path. */
 export interface Notification {
   id: string
   recipientId?: string
@@ -247,7 +300,7 @@ export interface Notification {
   createdAt?: FirestoreTimestamp
 }
 
-/** Target collection: `auditLogs` — not yet written by any code path. */
+/** Target collection: `auditLogs` â not yet written by any code path. */
 export interface AuditLog {
   id: string
   actorId?: string
@@ -260,7 +313,7 @@ export interface AuditLog {
   timestamp?: FirestoreTimestamp
 }
 
-/** Target document shape for `settings/platform` — collection does not exist yet. */
+/** Target document shape for `settings/platform` â collection does not exist yet. */
 export interface PlatformSettings {
   platformFee?: number
   fleetCommission?: number
