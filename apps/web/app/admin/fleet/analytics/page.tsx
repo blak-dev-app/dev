@@ -161,6 +161,8 @@ export default function FleetAnalyticsPage() {
     return ordered.reverse()
   }, [rides, credits])
 
+  const newestMonth = months.length ? months[0] : undefined
+  const oldestMonth = months.length ? months[months.length - 1] : undefined
   const peakRides = months.reduce((m, r) => Math.max(m, r.rides), 0)
   const completionRate = totalRides ? Math.round((completedRides / totalRides) * 100) : null
   const avgRevenuePerCompleted = completedRides ? totalRevenue / completedRides : null
@@ -217,7 +219,11 @@ export default function FleetAnalyticsPage() {
               <Kpi
                 label="Months with activity"
                 value={months.length}
-                sub={months.length ? `${monthLabel(months[months.length - 1].key)} → ${monthLabel(months[0].key)}` : undefined}
+                sub={
+                  oldestMonth && newestMonth
+                    ? `${monthLabel(oldestMonth.key)} → ${monthLabel(newestMonth.key)}`
+                    : undefined
+                }
               />
             </div>
           ) : null}
