@@ -3,7 +3,7 @@
 import * as React from "react"
 import Link from "next/link"
 import { collection, doc, onSnapshot, orderBy, query, updateDoc } from "firebase/firestore"
-import { db } from "@/lib/firebase"
+import { auth, db } from "@/lib/firebase"
 import { AdminShell } from "@/components/admin/admin-shell"
 import { PageHeader } from "@/components/admin/page-header"
 import { DataTable, Pagination, type Column } from "@/components/admin/data-table"
@@ -69,9 +69,13 @@ export default function FleetsPage() {
     setInvitingId(id)
     setInviteLink(null)
     try {
+      const token = await auth.currentUser?.getIdToken()
       const res = await fetch("/api/admin/invite", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({ type: "fleet", id }),
       })
       const json = await res.json()
