@@ -76,6 +76,21 @@ async function superAdminExists(auth: AdminAuth): Promise<boolean> {
 }
 
 /**
+ * True if this specific account already holds the super_admin claim.
+ *
+ * Used to keep claim syncing non-destructive. See the guard at the top of
+ * syncClaimsForUser for the reasoning.
+ */
+async function holdsSuperAdmin(auth: AdminAuth, uid: string): Promise<boolean> {
+  try {
+    const user = await auth.getUser(uid)
+    return (user.customClaims as Record<string, unknown> | undefined)?.role === "super_admin"
+  } catch {
+    return false
+  }
+}
+
+/**
  * Backfill Vehicle.fleetId for every vehicle owned by this driver that has a
  * driverId but no fleetId of its own. Returns how many were updated.
  */
@@ -115,6 +130,38 @@ async function syncClaimsForUser(
     vehicleFleetIdBackfilled: 0,
   }
 
+  // -------------------------------------------------------------------------
+  // NEVER DERIVE A PRIVILEGED CLAIM AWAY (task #212).
+  //
+  // Roles here are *derived*: this function looks the account up in
+  // driverApplications / fleetApplications and writes back whatever it finds.
+  // Those collections accept unauthenticated writes from the public Join Us
+  // form, by design. Without this guard, submitting a driver application using
+  // an administrator's email address is enough to strip that administrator's
+  // role the next time their session self-heals - no account, no credentials,
+  // no access required. That is not hypothetical: it happened in this project
+  // on 2026-08-18 and cost the only super_admin its role.
+  //
+  // PR #23 closed the injection point (the intake route now rejects admin
+  // emails). This closes the mechanism itself, which is the part that has to
+  // hold even when some future write path forgets to check. The rule is
+  // one-directional: this function may GRANT a role, never REVOKE one. The
+  // absence of an application document is not evidence that a role was
+  // withdrawn - revocation is a deliberate act and belongs in its own
+  // operation, not in a self-heal that runs on every sign-in.
+  // -------------------------------------------------------------------------
+  const priorClaims = (await auth.getUser(uid)).customClaims as
+    | Record<string, unknown>
+    | undefined
+  const priorRole = typeof priorClaims?.role === "string" ? priorClaims.role : null
+
+  if (priorRole === "super_admin") {
+    result.role = "super_admin"
+    result.reason =
+      "existing super_admin claim left untouched - privileged claims are never derived away"
+    return result
+  }
+
   // 1. Fleet admin — the account is the authUid on a fleetApplications doc.
   const fleetSnap = await db.collection("fleetApplications").where("authUid", "==", uid).limit(1).get()
   const fleetDoc = fleetSnap.docs[0]
@@ -122,6 +169,16 @@ async function syncClaimsForUser(
     await auth.setCustomUserClaims(uid, { role: "fleet_admin", fleetId: fleetDoc.id })
     result.role = "fleet_admin"
     result.reason = `linked to fleetApplications/${fleetDoc.id}`
+    return result
+  }
+
+  // A fleet_admin whose fleetApplications document no longer carries their
+  // authUid must not silently become a driver. Same rule as above, one rung
+  // down the ladder.
+  if (priorRole === "fleet_admin") {
+    result.role = "fleet_admin"
+    result.reason =
+      "existing fleet_admin claim left untouched - no matching fleet document, but privileged claims are never derived away"
     return result
   }
 
@@ -215,6 +272,10 @@ export async function POST(request: Request) {
       for (const doc of fleetSnap.docs) {
         const data = doc.data()
         if (!data.authUid) continue
+        if (await holdsSuperAdmin(auth, data.authUid)) {
+          summary.errors.push(`fleetApplications/${doc.id}: skipped - authUid holds super_admin`)
+          continue
+        }
         try {
           await auth.setCustomUserClaims(data.authUid, { role: "fleet_admin", fleetId: doc.id })
           summary.fleetsClaimed++
@@ -235,6 +296,10 @@ export async function POST(request: Request) {
           }
         }
         if (!data.authUid) continue
+        if (await holdsSuperAdmin(auth, data.authUid)) {
+          summary.errors.push(`driverApplications/${doc.id}: skipped - authUid holds super_admin`)
+          continue
+        }
         try {
           await auth.setCustomUserClaims(data.authUid, {
             role: "driver",
