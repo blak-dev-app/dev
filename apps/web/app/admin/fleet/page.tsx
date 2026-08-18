@@ -123,7 +123,12 @@ export default function FleetAdminDashboard() {
   }, [fleetId])
 
   const totalDrivers = drivers.length
-  const activeDrivers = drivers.filter((d) => d.status === "Approved").length
+  // FIXED 2026-08-18 (#214): this filtered "Approved", but the active status
+  // in this system is "Active" — "Approved" is the earlier step, before invite
+  // and onboarding. A fleet whose drivers were genuinely Active saw every one
+  // of them reported as Inactive on their own dashboard. Fourth appearance of
+  // this exact confusion; PR #24 fixed the same line on the fleet detail page.
+  const activeDrivers = drivers.filter((d) => d.status === "Active").length
   const inactiveDrivers = totalDrivers - activeDrivers
   const totalVehicles = vehicles.length
   const breakdownVehicles = vehicles.filter((v) => v.status === "Breakdown").length
