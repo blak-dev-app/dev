@@ -1,5 +1,4 @@
 "use client"
-
 import * as React from "react"
 import { useParams, useRouter } from "next/navigation"
 import { collection, doc, onSnapshot, orderBy, query, where } from "firebase/firestore"
@@ -7,7 +6,17 @@ import { db } from "@/lib/firebase"
 import { AdminShell } from "@/components/admin/admin-shell"
 import { superNavItems } from "@/lib/admin/nav"
 import { Button } from "@blak/ui/components/button"
+import { EditDetailsModal, humanizeDocKey } from "@/components/admin/edit-details-modal"
 import { ArrowLeft, Check } from "lucide-react"
+
+/** Fields Super Admin may correct on a fleet record. */
+const FLEET_EDITABLE_FIELDS = [
+  { key: "fleetName", label: "Fleet name" },
+  { key: "businessName", label: "Business name" },
+  { key: "email", label: "Email ID", type: "email" as const },
+  { key: "phone", label: "Phone number", type: "tel" as const },
+  { key: "address", label: "Full address" },
+]
 
 function formatDate(ts: any) {
   if (!ts) return "—"
@@ -22,7 +31,7 @@ export default function FleetDetailPage() {
   const [loading, setLoading] = React.useState(true)
   const [drivers, setDrivers] = React.useState<{ id: string; data: any }[]>([])
   const [transactions, setTransactions] = React.useState<{ id: string; data: any }[]>([])
-
+  const [editing, setEditing] = React.useState(false)
   React.useEffect(() => {
     if (!params?.id) return
     const unsub = onSnapshot(
@@ -35,7 +44,6 @@ export default function FleetDetailPage() {
     )
     return () => unsub()
   }, [params?.id])
-
   React.useEffect(() => {
     if (!data?.fleetName) return
     const q = query(collection(db, "driverApplications"), where("fleetName", "==", data.fleetName))
@@ -44,7 +52,6 @@ export default function FleetDetailPage() {
     )
     return () => unsub()
   }, [data?.fleetName])
-
   React.useEffect(() => {
     if (!params?.id) return
     const q = query(collection(db, "transactions"), where("fleetId", "==", params.id), orderBy("createdAt", "desc"))
@@ -54,8 +61,21 @@ export default function FleetDetailPage() {
     return () => unsub()
   }, [params?.id])
 
-  const activeDrivers = drivers.filter((d) => (d.data.status || "") === "Approved").length
+  // FIXED 2026-08-18: this counted `status === "Approved"` as active. The active
+  // status in this system is "Active" — "Approved" is the earlier step, before
+  // the driver has been invited and onboarded. The effect was that a fleet whose
+  // drivers were genuinely Active reported 0 active and all of them inactive:
+  // exactly backwards, on the page used to judge the fleet.
+  const activeDrivers = drivers.filter((d) => (d.data.status || "") === "Active").length
   const inactiveDrivers = drivers.length - activeDrivers
+
+  // Documents ACTUALLY on the record. See humanizeDocKey() for why this is
+  // derived rather than a fixed list.
+  const uploadedDocs: string[] = React.useMemo(() => {
+    const docs = data?.documents
+    if (!docs || typeof docs !== "object") return []
+    return Object.keys(docs).filter((key) => docs[key] && docs[key].url)
+  }, [data?.documents])
 
   return (
     <AdminShell navItems={superNavItems} welcomeName="Admin">
@@ -63,7 +83,6 @@ export default function FleetDetailPage() {
         <ArrowLeft className="mr-1 size-4" />
         Fleet Details
       </Button>
-
       {loading ? (
         <p className="text-sm text-muted-foreground">Loading…</p>
       ) : !data ? (
@@ -115,19 +134,32 @@ export default function FleetDetailPage() {
                 <dd className="inline text-muted-foreground">{drivers.length || data.driversCount || "—"}</dd>
               </div>
             </dl>
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-4 w-full"
+              onClick={() => setEditing(true)}
+            >
+              Edit details
+            </Button>
             <div className="mt-6">
               <h4 className="mb-2 text-sm font-semibold">Document list</h4>
-              <ul className="space-y-1 text-sm text-muted-foreground">
-                {["Passport", "Insurance", "Address proof"].map((doc) => (
-                  <li key={doc} className="flex items-center gap-2">
-                    <Check className="size-4 text-emerald-500" />
-                    {doc}
-                  </li>
-                ))}
-              </ul>
+              {uploadedDocs.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  No documents uploaded yet.
+                </p>
+              ) : (
+                <ul className="space-y-1 text-sm text-muted-foreground">
+                  {uploadedDocs.map((key) => (
+                    <li key={key} className="flex items-center gap-2">
+                      <Check className="size-4 text-emerald-500" />
+                      {humanizeDocKey(key)}
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           </div>
-
           <div className="rounded-xl border border-border bg-card p-6">
             <h3 className="mb-4 text-sm font-semibold">Drivers</h3>
             <div className="grid grid-cols-3 gap-3 text-center">
@@ -145,7 +177,6 @@ export default function FleetDetailPage() {
               </div>
             </div>
           </div>
-
           <div className="rounded-xl border border-border bg-card p-6">
             <h3 className="mb-4 text-sm font-semibold">Payments</h3>
             <div className="mb-4 grid grid-cols-3 gap-3 text-center">
@@ -179,6 +210,17 @@ export default function FleetDetailPage() {
           </div>
         </div>
       )}
+      {data && params?.id ? (
+        <EditDetailsModal
+          open={editing}
+          onClose={() => setEditing(false)}
+          title={data.fleetName || "Fleet"}
+          collectionName="fleetApplications"
+          docId={params.id}
+          fields={FLEET_EDITABLE_FIELDS}
+          current={data}
+        />
+      ) : null}
     </AdminShell>
   )
 }

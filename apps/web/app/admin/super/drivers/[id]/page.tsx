@@ -1,5 +1,4 @@
 "use client"
-
 import * as React from "react"
 import { useParams, useRouter } from "next/navigation"
 import { collection, doc, onSnapshot, orderBy, query, where } from "firebase/firestore"
@@ -7,7 +6,25 @@ import { db } from "@/lib/firebase"
 import { AdminShell } from "@/components/admin/admin-shell"
 import { superNavItems } from "@/lib/admin/nav"
 import { Button } from "@blak/ui/components/button"
+import { EditDetailsModal, humanizeDocKey } from "@/components/admin/edit-details-modal"
 import { ArrowLeft, Check } from "lucide-react"
+
+/**
+ * Fields Super Admin may correct on a driver record.
+ *
+ * `fleetName` is deliberately NOT editable here. It is a denormalized copy that
+ * lib/fleet-resolve.ts uses to derive Driver.fleetId, so typing a fleet name by
+ * hand would silently re-point the driver at a different operator — or at none.
+ * Reassigning a driver to a fleet is its own operation (see task #185), not a
+ * free-text field.
+ */
+const DRIVER_EDITABLE_FIELDS = [
+  { key: "fullName", label: "Full name" },
+  { key: "email", label: "Email ID", type: "email" as const },
+  { key: "phone", label: "Phone number", type: "tel" as const },
+  { key: "address", label: "Full address" },
+  { key: "vehicleType", label: "Vehicle type" },
+]
 
 function formatDate(ts: any) {
   if (!ts) return "—"
@@ -21,7 +38,7 @@ export default function DriverDetailPage() {
   const [data, setData] = React.useState<any>(null)
   const [loading, setLoading] = React.useState(true)
   const [trips, setTrips] = React.useState<{ id: string; data: any }[]>([])
-
+  const [editing, setEditing] = React.useState(false)
   React.useEffect(() => {
     if (!params?.id) return
     const unsub = onSnapshot(
@@ -34,7 +51,6 @@ export default function DriverDetailPage() {
     )
     return () => unsub()
   }, [params?.id])
-
   React.useEffect(() => {
     if (!params?.id) return
     const q = query(collection(db, "rides"), where("driverId", "==", params.id), orderBy("createdAt", "desc"))
@@ -43,10 +59,18 @@ export default function DriverDetailPage() {
     )
     return () => unsub()
   }, [params?.id])
-
   const total = trips.length
   const completed = trips.filter((t) => t.data.status === "Completed").length
   const cancelled = trips.filter((t) => t.data.status === "Cancelled").length
+
+  // Documents ACTUALLY on the record, replacing a hardcoded three-item list
+  // that showed a green tick for Passport / Insurance / Address proof on every
+  // driver regardless of what had been uploaded. See humanizeDocKey().
+  const uploadedDocs: string[] = React.useMemo(() => {
+    const docs = data?.documents
+    if (!docs || typeof docs !== "object") return []
+    return Object.keys(docs).filter((key) => docs[key] && docs[key].url)
+  }, [data?.documents])
 
   return (
     <AdminShell navItems={superNavItems} welcomeName="Admin">
@@ -54,7 +78,6 @@ export default function DriverDetailPage() {
         <ArrowLeft className="mr-1 size-4" />
         Driver Details
       </Button>
-
       {loading ? (
         <p className="text-sm text-muted-foreground">Loading…</p>
       ) : !data ? (
@@ -103,22 +126,35 @@ export default function DriverDetailPage() {
               </div>
               <div>
                 <dt className="inline font-semibold">Fleet: </dt>
-                <dd className="inline text-muted-foreground">{data.fleetName || "—"}</dd>
+                <dd className="inline text-muted-foreground">{data.fleetName || "Independent driver"}</dd>
               </div>
             </dl>
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-4 w-full"
+              onClick={() => setEditing(true)}
+            >
+              Edit details
+            </Button>
             <div className="mt-6">
               <h4 className="mb-2 text-sm font-semibold">Document list</h4>
-              <ul className="space-y-1 text-sm text-muted-foreground">
-                {["Passport", "Insurance", "Address proof"].map((doc) => (
-                  <li key={doc} className="flex items-center gap-2">
-                    <Check className="size-4 text-emerald-500" />
-                    {doc}
-                  </li>
-                ))}
-              </ul>
+              {uploadedDocs.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  No documents uploaded yet.
+                </p>
+              ) : (
+                <ul className="space-y-1 text-sm text-muted-foreground">
+                  {uploadedDocs.map((key) => (
+                    <li key={key} className="flex items-center gap-2">
+                      <Check className="size-4 text-emerald-500" />
+                      {humanizeDocKey(key)}
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           </div>
-
           <div className="rounded-xl border border-border bg-card p-6">
             <h3 className="mb-4 text-sm font-semibold">Trip overview</h3>
             <div className="grid grid-cols-3 gap-3 text-center">
@@ -136,7 +172,6 @@ export default function DriverDetailPage() {
               </div>
             </div>
           </div>
-
           <div className="rounded-xl border border-border bg-card p-6">
             <h3 className="mb-4 text-sm font-semibold">Payments</h3>
             <div className="mb-4 grid grid-cols-3 gap-3 text-center">
@@ -170,6 +205,17 @@ export default function DriverDetailPage() {
           </div>
         </div>
       )}
+      {data && params?.id ? (
+        <EditDetailsModal
+          open={editing}
+          onClose={() => setEditing(false)}
+          title={data.fullName || "Driver"}
+          collectionName="driverApplications"
+          docId={params.id}
+          fields={DRIVER_EDITABLE_FIELDS}
+          current={data}
+        />
+      ) : null}
     </AdminShell>
   )
 }
