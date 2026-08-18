@@ -34,9 +34,32 @@ type Doc = Record<string, any>
  * intake validation. Sharing the definition means the dashboard, the signup
  * form and the intake route can no longer disagree about which fleets are real.
  */
-const ONBOARDED_STATUSES = ["Approved", "Invited", "Active"]
+/**
+ * CORRECTED 2026-08-18, same day, same task. The first version of this fix
+ * used an allow-list of ["Approved", "Invited", "Active"] — and that was the
+ * very mistake it was written to remove, just one status further along.
+ *
+ * lib/types.ts is the authority, and it says:
+ *   FleetStatus  = "Pending Review" | "Approved" | "Invited" | "Documents Submitted" | "Rejected"
+ *   DriverStatus = ... | "Invited" | "Documents Submitted" | "Active"
+ *
+ * So the allow-list omitted "Documents Submitted" entirely — an operator who
+ * had been approved, invited and had actually uploaded their paperwork would
+ * DROP OUT of the headline count while their application was under final
+ * review, then reappear on activation. It also listed "Active", which is not
+ * a valid FleetStatus at all.
+ *
+ * Root cause of the error: the allow-list was enumerated from the statuses
+ * observed in the live database rather than read off the type definition.
+ * Only two records exist today, so the gap was invisible.
+ *
+ * Now expressed as a deny-list. "Onboarded" means "got past intake and was not
+ * rejected", which is stable under new statuses being added to the lifecycle —
+ * a future mid-flow state counts automatically instead of silently vanishing.
+ */
+const NOT_ONBOARDED_STATUSES = ["Pending Review", "Rejected"]
 function isOnboarded(d: Doc) {
-  return ONBOARDED_STATUSES.includes(d.status)
+  return Boolean(d.status) && !NOT_ONBOARDED_STATUSES.includes(d.status)
 }
 function formatDate(ts: any) {
   if (!ts) return "—"
