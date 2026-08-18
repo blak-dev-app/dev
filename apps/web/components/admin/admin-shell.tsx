@@ -1,5 +1,4 @@
 "use client"
-
 import * as React from "react"
 import Image from "next/image"
 import Link from "next/link"
@@ -11,12 +10,12 @@ import {
   onSnapshot,
   orderBy,
   query,
+  where,
 } from "firebase/firestore"
 import { onAuthStateChanged, signOut } from "firebase/auth"
 import { auth, db } from "@/lib/firebase"
 import { cn } from "@blak/ui/lib/utils"
 import type { AdminNavItem } from "@/lib/admin/nav"
-
 type AdminShellProps = {
   navItems: AdminNavItem[]
   welcomeName?: string
@@ -30,7 +29,6 @@ type AdminShellProps = {
   searchValue?: string
   onSearchChange?: (value: string) => void
 }
-
 function initials(name?: string) {
   if (!name) return "AD"
   return name
@@ -40,7 +38,6 @@ function initials(name?: string) {
     .slice(0, 2)
     .toUpperCase()
 }
-
 function formatRelative(ts: any) {
   if (!ts) return ""
   const d = ts.toDate ? ts.toDate() : new Date(ts)
@@ -53,7 +50,6 @@ function formatRelative(ts: any) {
   const day = Math.floor(hr / 24)
   return `${day}d ago`
 }
-
 type Notification = {
   id: string
   title: string
@@ -61,7 +57,84 @@ type Notification = {
   createdAt: any
   source: string
 }
-
+type NotificationSource = {
+  col: string
+  label: (d: any) => string
+  kind: string
+  /** [field, value] equality filter. Omitted means "read the collection unscoped". */
+  scope?: [string, string]
+}
+/**
+ * Which collections this role may be notified about, and how they are scoped.
+ *
+ * REWRITTEN 2026-08-18 (task #209). This used to be a fixed list of three
+ * collections read with `orderBy("createdAt") limit(5)` and **no `where`
+ * clause at all**, identically for every role. Three separate problems:
+ *
+ *  1. CROSS-TENANT LEAK. The `queries` collection was readable by any signed-in
+ *     account under the old rules, so a fleet admin's notification bell was
+ *     quietly showing them other operators' support queries. The rules fix on
+ *     2026-08-18 closed the read, which is why that listener now errors rather
+ *     than leaks — but the query itself was always wrong and is fixed here.
+ *
+ *  2. PERMANENTLY BROKEN FOR FLEET ADMINS. Firestore evaluates list queries
+ *     against the rules up front and only permits a query it can prove is safe
+ *     for every possible result. The application collections are read-gated on
+ *     fleet ownership, so an unscoped list can never satisfy them. Two of these
+ *     three listeners had therefore been failing for fleet admins since the day
+ *     role scoping was introduced, producing the permission-denied errors that
+ *     appear on every admin page load.
+ *
+ *  3. `queries` IS DEAD. It was superseded by the unified `tickets` collection
+ *     in task #157 and nothing writes to it any more, so even for Super Admin
+ *     that listener could only ever surface stale history. Repointed.
+ *
+ * Scoped sources deliberately do NOT use `orderBy`. An equality filter plus an
+ * orderBy on a different field requires a composite index, and a missing index
+ * fails the listener outright — the exact failure mode this function exists to
+ * remove. Sorting a small tenant-scoped window client-side avoids depending on
+ * an index that has to be created by hand in the Firebase console.
+ */
+function notificationSourcesFor(role: string | null, fleetId: string | null): NotificationSource[] {
+  if (role === "super_admin") {
+    return [
+      {
+        col: "fleetApplications",
+        label: (d) => `New fleet application — ${d.fleetName || d.businessName || "Unnamed"}`,
+        kind: "Fleet",
+      },
+      {
+        col: "driverApplications",
+        label: (d) => `New driver application — ${d.fullName || d.username || "Unnamed"}`,
+        kind: "Driver",
+      },
+      {
+        col: "tickets",
+        label: (d) => `New ticket — ${d.subject || d.message || "Untitled"}`,
+        kind: "Ticket",
+      },
+    ]
+  }
+  if (role === "fleet_admin" && fleetId) {
+    return [
+      {
+        col: "driverApplications",
+        label: (d) => `Driver — ${d.fullName || d.username || "Unnamed"}`,
+        kind: "Driver",
+        scope: ["fleetId", fleetId],
+      },
+      {
+        col: "tickets",
+        label: (d) => `Ticket — ${d.subject || d.message || "Untitled"}`,
+        kind: "Ticket",
+        scope: ["fleetId", fleetId],
+      },
+    ]
+  }
+  // Unknown or unscoped role: show nothing rather than attempt a read that
+  // the rules will refuse.
+  return []
+}
 function useClickOutside(ref: React.RefObject<HTMLElement | null>, onOutside: () => void) {
   React.useEffect(() => {
     function handler(e: MouseEvent) {
@@ -71,41 +144,48 @@ function useClickOutside(ref: React.RefObject<HTMLElement | null>, onOutside: ()
     return () => document.removeEventListener("mousedown", handler)
   }, [ref, onOutside])
 }
-
-function NotificationBell() {
+function NotificationBell({ role, fleetId }: { role: string | null; fleetId: string | null }) {
   const [open, setOpen] = React.useState(false)
   const [items, setItems] = React.useState<Notification[]>([])
   const ref = React.useRef<HTMLDivElement>(null)
   useClickOutside(ref, () => setOpen(false))
-
   React.useEffect(() => {
-    const sources: { col: string; label: (d: any) => string; kind: string }[] = [
-      { col: "fleetApplications", label: (d) => `New fleet application â ${d.companyName || d.name || "Unnamed"}`, kind: "Fleet" },
-      { col: "driverApplications", label: (d) => `New driver application â ${d.name || "Unnamed"}`, kind: "Driver" },
-      { col: "queries", label: (d) => `New query â ${d.subject || d.message || "Untitled"}`, kind: "Query" },
-    ]
-    const unsubs = sources.map(({ col, label, kind }) =>
-      onSnapshot(query(collection(db, col), orderBy("createdAt", "desc"), limit(5)), (snap) => {
-        const next = snap.docs.map((doc) => ({
-          id: `${col}-${doc.id}`,
-          title: label(doc.data()),
-          subtitle: kind,
-          createdAt: doc.data().createdAt,
-          source: col,
-        }))
-        setItems((prev) => {
-          const withoutSource = prev.filter((p) => p.source !== col)
-          return [...withoutSource, ...next]
-            .sort((a, b) => (b.createdAt?.toMillis?.() ?? 0) - (a.createdAt?.toMillis?.() ?? 0))
-            .slice(0, 8)
-        })
-      })
-    )
+    setItems([])
+    const sources = notificationSourcesFor(role, fleetId)
+    if (sources.length === 0) return
+    const unsubs = sources.map(({ col, label, kind, scope }) => {
+      const q = scope
+        ? query(collection(db, col), where(scope[0], "==", scope[1]), limit(20))
+        : query(collection(db, col), orderBy("createdAt", "desc"), limit(5))
+      return onSnapshot(
+        q,
+        (snap) => {
+          const next = snap.docs.map((doc) => ({
+            id: `${col}-${doc.id}`,
+            title: label(doc.data()),
+            subtitle: kind,
+            createdAt: doc.data().createdAt,
+            source: col,
+          }))
+          setItems((prev) => {
+            const withoutSource = prev.filter((p) => p.source !== col)
+            return [...withoutSource, ...next]
+              .sort((a, b) => (b.createdAt?.toMillis?.() ?? 0) - (a.createdAt?.toMillis?.() ?? 0))
+              .slice(0, 8)
+          })
+        },
+        // An unhandled listener rejection surfaces as "Uncaught Error in
+        // snapshot listener" with no indication of which collection failed.
+        // Name it.
+        (error) => {
+          console.error(`Notification listener failed for "${col}":`, error)
+          setItems((prev) => prev.filter((p) => p.source !== col))
+        }
+      )
+    })
     return () => unsubs.forEach((u) => u())
-  }, [])
-
+  }, [role, fleetId])
   const count = items.length
-
   return (
     <div className="relative" ref={ref}>
       <button
@@ -144,19 +224,16 @@ function NotificationBell() {
     </div>
   )
 }
-
 function ProfileMenu({ welcomeName }: { welcomeName?: string }) {
   const router = useRouter()
   const [open, setOpen] = React.useState(false)
   const ref = React.useRef<HTMLDivElement>(null)
   useClickOutside(ref, () => setOpen(false))
-
   async function handleLogout() {
     setOpen(false)
     await signOut(auth)
     router.push("/")
   }
-
   return (
     <div className="relative" ref={ref}>
       <button
@@ -193,12 +270,11 @@ function ProfileMenu({ welcomeName }: { welcomeName?: string }) {
     </div>
   )
 }
-
 /**
- * Which role is allowed to view a given /admin/* path. Added 2026-08-17 â
+ * Which role is allowed to view a given /admin/* path. Added 2026-08-17 —
  * see BLAK_IMPLEMENTATION_STATUS.md Phase 2. Previously AdminShell only
  * checked "is anyone signed in", which meant a driver's or a fleet
- * admin's account could load the Super Admin dashboard and vice versa â
+ * admin's account could load the Super Admin dashboard and vice versa —
  * there was no role concept anywhere in the app. This function is the
  * single place that decides which role a path requires; individual pages
  * don't need to opt in.
@@ -209,14 +285,12 @@ function requiredRoleFor(pathname: string | null): string | null {
   if (pathname.startsWith("/admin/fleet")) return "fleet_admin"
   return null
 }
-
 function homeForRole(role: string | null | undefined): string {
   if (role === "super_admin") return "/admin/super"
   if (role === "fleet_admin") return "/admin/fleet"
   if (role === "driver") return "/driver"
   return "/"
 }
-
 export function AdminShell({
   navItems,
   welcomeName,
@@ -228,75 +302,77 @@ export function AdminShell({
   const router = useRouter()
   const [authChecked, setAuthChecked] = React.useState(false)
   const [localSearch, setLocalSearch] = React.useState("")
-
+  const [role, setRole] = React.useState<string | null>(null)
+  const [fleetId, setFleetId] = React.useState<string | null>(null)
+  const healAttemptedRef = React.useRef(false)
   React.useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (user) => {
       const loginHref = pathname?.startsWith("/admin/fleet") ? "/admin/fleet/login" : "/admin/super/login"
-
       if (!user) {
         router.replace(loginHref)
         return
       }
-
       const required = requiredRoleFor(pathname)
-      if (!required) {
-        // Not a role-scoped path (shouldn't happen for anything AdminShell
-        // wraps today, but fail open to "signed in" rather than block).
-        setAuthChecked(true)
-        return
-      }
-
       let tokenResult = await user.getIdTokenResult()
-      let role = tokenResult.claims.role as string | undefined
-
-      if (!role) {
-        // Bootstrap self-heal: this session predates role claims existing,
-        // or the account was created outside the invite flow. Ask the
-        // server to (re)compute every account's claims from Firestore,
-        // then force-refresh this one token. Idempotent â safe even if
-        // several tabs trigger it at once.
+      let currentRole = tokenResult.claims.role as string | undefined
+      // Self-heal. The old condition was `if (!role)` — missing claim only —
+      // which made a WRONG role stickier than a missing one: a stale or
+      // incorrect claim cached in the session could never be corrected from
+      // inside the app. That is exactly what happened during the accidental
+      // demotion on 2026-08-18 and it forced a manual IndexedDB clear to
+      // recover. Now a claim that disagrees with the page's requirement also
+      // triggers one re-sync before we give up and redirect.
+      //
+      // Safe to call on mismatch: PR #25 made syncClaimsForUser strictly
+      // non-destructive — it may grant or correct a claim, never revoke one —
+      // so this cannot escalate anyone into a role they don't hold. Guarded
+      // by a ref so it runs at most once per mount and cannot loop.
+      const needsHeal = !currentRole || (required !== null && currentRole !== required)
+      if (needsHeal && !healAttemptedRef.current) {
+        healAttemptedRef.current = true
         try {
           await fetch("/api/admin/backfill-claims", {
             method: "POST",
             headers: { Authorization: `Bearer ${tokenResult.token}` },
           })
           tokenResult = await user.getIdTokenResult(true)
-          role = tokenResult.claims.role as string | undefined
+          currentRole = tokenResult.claims.role as string | undefined
         } catch {
-          // fall through â worst case, role stays undefined and we send
-          // them back to login below rather than guess.
+          // fall through — worst case, the claim is unchanged and we route
+          // below rather than guess.
         }
       }
-
-      if (!role) {
+      setRole(currentRole ?? null)
+      setFleetId((tokenResult.claims.fleetId as string | undefined) ?? null)
+      if (!required) {
+        // Not a role-scoped path (shouldn't happen for anything AdminShell
+        // wraps today, but fail open to "signed in" rather than block).
+        setAuthChecked(true)
+        return
+      }
+      if (!currentRole) {
         router.replace(loginHref)
         return
       }
-
-      if (role !== required) {
-        router.replace(homeForRole(role))
+      if (currentRole !== required) {
+        router.replace(homeForRole(currentRole))
         return
       }
-
       setAuthChecked(true)
     })
     return () => unsub()
   }, [pathname, router])
-
   // If the page didn't opt into a controlled search box, fall back to local
-  // state (still a real, working input â just not wired to filter anything
+  // state (still a real, working input — just not wired to filter anything
   // on pages that haven't adopted the pattern yet). Reset on navigation.
   React.useEffect(() => {
     setLocalSearch("")
   }, [pathname])
-
   const effectiveSearchValue = searchValue ?? localSearch
   const effectiveOnSearchChange = onSearchChange ?? setLocalSearch
-
   if (!authChecked) {
     return null
   }
-
   return (
     <div className="flex min-h-screen bg-background">
       <aside className="hidden w-64 shrink-0 flex-col border-r border-border bg-card px-4 py-6 lg:flex">
@@ -344,7 +420,6 @@ export function AdminShell({
           })}
         </nav>
       </aside>
-
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex items-center justify-between gap-4 border-b border-border px-6 py-4">
           <div className="flex h-10 w-full max-w-xs items-center gap-2 rounded-lg border border-border bg-input/30 px-3">
@@ -357,7 +432,7 @@ export function AdminShell({
             />
           </div>
           <div className="flex items-center gap-4">
-            <NotificationBell />
+            <NotificationBell role={role} fleetId={fleetId} />
             <ProfileMenu welcomeName={welcomeName} />
           </div>
         </header>
