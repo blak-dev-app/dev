@@ -7,26 +7,12 @@ import { AdminShell } from "@/components/admin/admin-shell"
 import { fleetNavItems } from "@/lib/admin/nav"
 import { useAdminClaims } from "@/lib/auth-claims"
 import { DateRangeFilter, isWithinDateRange, type DateRangeValue } from "@/components/admin/date-range-filter"
+import { isDriverActive, isDriverOnboarded } from "@/lib/types"
 type Doc = Record<string, any>
 
-/**
- * Statuses that mean this driver never became a real driver for the fleet.
- *
- * Kept as a deny-list for the same reason as the Super Admin dashboard: an
- * allow-list has to be updated every time a status is added to the lifecycle,
- * and forgetting to do so silently drops people from the count. That mistake
- * has now been made repeatedly in this codebase — see task #214.
- *
- * DUPLICATED DELIBERATELY, FOR NOW. This is the second copy of this rule and
- * it should be the last: task #216 moves it into lib/types.ts next to the
- * DriverStatus / FleetStatus definitions so every consumer imports one shared
- * set instead of hand-rolling its own. Copying it here rather than inventing a
- * third variation keeps the two dashboards agreeing until that lands.
- */
-const NOT_ONBOARDED_STATUSES = ["Pending Review", "Rejected"]
-function isOnboarded(d: Doc) {
-  return Boolean(d.status) && !NOT_ONBOARDED_STATUSES.includes(d.status)
-}
+// Status classification lives in lib/types.ts (task #216). The deny-list that
+// was duplicated here in PR #30 is gone — both dashboards now import the same
+// helpers, so a new lifecycle status is classified in exactly one place.
 function formatDate(ts: any) {
   if (!ts) return "—"
   const d = ts.toDate ? ts.toDate() : new Date(ts)
@@ -138,12 +124,12 @@ export default function FleetAdminDashboard() {
   // including "Rejected" applicants. A driver this fleet turned down still
   // holds the fleetId, so rejections inflated the headline count — and the
   // fleet had no way to tell. Now consistent with the Super Admin dashboard.
-  const fleetDrivers = drivers.filter(isOnboarded)
+  const fleetDrivers = drivers.filter((d) => isDriverOnboarded(d.status))
   const totalDrivers = fleetDrivers.length
   // FIXED 2026-08-18 (PR #28): filtered "Approved", but the active status in
   // this system is "Active". Left here as a named constant so the two lines
   // below can't drift apart again.
-  const activeDrivers = fleetDrivers.filter((d) => d.status === "Active").length
+  const activeDrivers = fleetDrivers.filter((d) => isDriverActive(d.status)).length
   const inactiveDrivers = totalDrivers - activeDrivers
   const totalVehicles = vehicles.length
   const breakdownVehicles = vehicles.filter((v) => v.status === "Breakdown").length
