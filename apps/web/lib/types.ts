@@ -85,7 +85,21 @@ export interface Driver {
   createdAt?: FirestoreTimestamp
 }
 
-export type FleetStatus = "Pending Review" | "Approved" | "Invited" | "Documents Submitted" | "Rejected"
+/**
+ * NOTE 2026-08-18 (#216): "Active" was missing from this union, while
+ * /api/admin/final-decision has always written `status: "Active"` onto
+ * fleetApplications on approval — that route accepts only "Active" or
+ * "Rejected" as a decision. So the type forbade the value the code writes on
+ * every successful approval, and there is live data in that state. Added
+ * rather than removed: the running behaviour is the intended one.
+ */
+export type FleetStatus =
+  | "Pending Review"
+  | "Approved"
+  | "Invited"
+  | "Documents Submitted"
+  | "Active"
+  | "Rejected"
 
 /** Collection: `fleetApplications` */
 export interface Fleet {
@@ -98,6 +112,61 @@ export interface Fleet {
   source?: string
   status?: FleetStatus
   createdAt?: FirestoreTimestamp
+}
+
+// ---------------------------------------------------------------------------
+// Shared status sets
+//
+// ADDED 2026-08-18 (task #216). Before this, every dashboard, filter and guard
+// hand-rolled its own answer to "which statuses count?" — and got it wrong six
+// separate times, including once in the fix written for the previous five. The
+// failure is always the same shape: an allow-list is enumerated from whatever
+// statuses happen to exist in the database that day, a new one is added to the
+// lifecycle later, and records silently disappear from a count.
+//
+// These sets are the single place that question is answered. Import them.
+// Do not re-derive a subset inline.
+// ---------------------------------------------------------------------------
+
+/**
+ * Driver statuses meaning "never became a driver" — either still at the gate,
+ * or refused. Everything else counts as onboarded, including mid-flow states
+ * like "Documents Submitted" and post-activation states like "Inactive" or
+ * "Suspended": a suspended driver is still one of your drivers.
+ *
+ * Deliberately a DENY-list. A new lifecycle status added to DriverStatus is
+ * counted automatically, which is the safe direction to fail.
+ */
+export const DRIVER_NOT_ONBOARDED: readonly DriverStatus[] = ["Pending Review", "Applied", "Rejected"]
+
+/** Fleet equivalent. FleetStatus has no "Applied" state. */
+export const FLEET_NOT_ONBOARDED: readonly FleetStatus[] = ["Pending Review", "Rejected"]
+
+/**
+ * Has this application become a real driver on the books?
+ *
+ * Accepts a loose string because Firestore documents are untyped at the read
+ * boundary. A record with no status at all has not been through intake and is
+ * not onboarded.
+ */
+export function isDriverOnboarded(status?: string | null): boolean {
+  return Boolean(status) && !(DRIVER_NOT_ONBOARDED as readonly string[]).includes(status as string)
+}
+
+/** Fleet equivalent of isDriverOnboarded. */
+export function isFleetOnboarded(status?: string | null): boolean {
+  return Boolean(status) && !(FLEET_NOT_ONBOARDED as readonly string[]).includes(status as string)
+}
+
+/**
+ * Currently driving, as opposed to merely onboarded.
+ *
+ * This is the distinction that caused the whole mess: "Approved" means cleared
+ * for invite, NOT operating. Four separate screens counted "Approved" as
+ * active and therefore reported genuinely Active drivers as Inactive.
+ */
+export function isDriverActive(status?: string | null): boolean {
+  return status === "Active"
 }
 
 export type VehicleStatus = "Available" | "Driver Assigned" | "Breakdown"
