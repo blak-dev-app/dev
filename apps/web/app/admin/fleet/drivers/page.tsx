@@ -11,6 +11,7 @@ import { StatusFilter } from "@/components/admin/status-filter"
 import { fleetNavItems } from "@/lib/admin/nav"
 import { useAdminClaims } from "@/lib/auth-claims"
 import { Button } from "@blak/ui/components/button"
+import { BulkRegisterDriversModal } from "@/components/admin/bulk-register-drivers-modal"
 
 const columns: Column[] = [
   { key: "idx", label: "S. No." },
@@ -47,6 +48,7 @@ export default function FleetDriversPage() {
   const [searchTerm, setSearchTerm] = React.useState("")
   const [statusFilter, setStatusFilter] = React.useState<string | null>(null)
   const [page, setPage] = React.useState(1)
+  const [bulkOpen, setBulkOpen] = React.useState(false)
 
   // Scoped to this fleet's own fleetId (from the signed-in user's Auth
   // custom claim) instead of the previous unscoped collection(db,
@@ -125,10 +127,23 @@ export default function FleetDriversPage() {
     <AdminShell navItems={fleetNavItems} welcomeName="Fleet Admin" searchValue={searchTerm} onSearchChange={setSearchTerm}>
       <PageHeader
         title="DRIVERS"
-        actions={<StatusFilter options={STATUS_OPTIONS} value={statusFilter} onChange={setStatusFilter} />}
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            <StatusFilter options={STATUS_OPTIONS} value={statusFilter} onChange={setStatusFilter} />
+            <Button size="sm" disabled={!fleetId} onClick={() => setBulkOpen(true)}>
+              Bulk register drivers
+            </Button>
+          </div>
+        }
       />
+      {/* Wording changed 2026-08-24 (task #217). This used to say drivers
+          "appear here automatically", which was accurate when the only route in
+          was a driver applying through the website and Super Admin inviting
+          them. A fleet can now add its own roster, so the sentence would have
+          told operators the opposite of what the button next to it does. */}
       <p className="mb-4 text-xs font-semibold text-muted-foreground">
-        Live from Firestore — drivers invited into your fleet appear here automatically.
+        Live from Firestore — drivers who apply to your fleet appear here automatically, and you can
+        add your existing roster with Bulk register.
       </p>
       {claimsLoading || loading ? (
         <p className="text-sm text-muted-foreground">Loading…</p>
@@ -138,7 +153,13 @@ export default function FleetDriversPage() {
           profile connected to this login.
         </p>
       ) : docs.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No drivers have been added to this fleet yet.</p>
+        <p className="text-sm text-muted-foreground">
+          No drivers have been added to this fleet yet. Use{" "}
+          <button type="button" className="underline" onClick={() => setBulkOpen(true)}>
+            Bulk register drivers
+          </button>{" "}
+          to upload your roster from a spreadsheet.
+        </p>
       ) : filteredDocs.length === 0 ? (
         <p className="text-sm text-muted-foreground">
           No drivers match your {isFiltered ? "search/filter" : "search"}.
@@ -149,6 +170,11 @@ export default function FleetDriversPage() {
           <Pagination page={page} pageCount={pageCount} onPageChange={setPage} />
         </>
       )}
+
+      {/* The list above is a live onSnapshot subscription, so rows created by a
+          bulk import appear the moment the commit lands — no refresh, and no
+          need for this modal to report back into the page's state. */}
+      <BulkRegisterDriversModal open={bulkOpen} onClose={() => setBulkOpen(false)} />
     </AdminShell>
   )
 }
